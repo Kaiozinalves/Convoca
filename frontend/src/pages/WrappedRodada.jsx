@@ -340,7 +340,7 @@ export function WrappedRodada() {
               <>
                 <div className="wrapped-nota-progresso">{avaliados} de {jogadoresParaAvaliar.length} avaliados</div>
                 <div className="wrapped-jogador-card">
-                  <span className="wrapped-avatar">{nomeDe(jogadorAtual).slice(0, 1).toUpperCase()}</span>
+                  <span className="wrapped-avatar">{(Array.from(nomeDe(jogadorAtual).trim())[0] || "?").toUpperCase()}</span>
                   <span className="wrapped-jogador-posicao">Jogador {jogadorIndex + 1} de {jogadoresParaAvaliar.length}</span>
                   <h2>{nomeDe(jogadorAtual)}</h2>
                   <div className="wrapped-notas" role="group" aria-label={`Nota para ${nomeDe(jogadorAtual)}`}>

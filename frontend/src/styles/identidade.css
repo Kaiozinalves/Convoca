@@ -1,0 +1,197 @@
+/* PelManager — identidade v3: "súmula". Papel frio, tinta verde-escura, uma cor de ação (gramado),
+   linhas de campo como estrutura e numerais grandes como o elemento memorável.
+   Camada final: redefine os tokens e ajusta os componentes sem mudar nomes de classe.
+   Regras seguidas: frontend-design (direção própria), typography (≤3 pesos, mín. 12px),
+   colour-palette (60-30-10, 1px de borda antes de sombra), spacing (grade 4/8), anti-slop (sem blur/gradiente decorativo). */
+
+:root {
+  /* Cor — 60% papel, 30% folha branca com borda de cal, 10% gramado */
+  --cor-giz: #F3F4EF;          /* papel (canvas) */
+  --cor-giz-forte: #E7E9E1;
+  --cor-branco: #FFFFFF;       /* folha (superfície) */
+  --cor-tinta: #15221B;
+  --cor-tinta-suave: #55625A;  /* 6:1 sobre papel */
+  --cor-tinta-fraca: #76827A;
+  --cor-linha: #D9DED3;        /* cal */
+  --cor-campo: #FFFFFF;
+  --cor-grama: #0E7C4A;        /* única cor de ação */
+  --cor-grama-escura: #095C37;
+  --cor-grama-suave: #E2EFE7;
+  --cor-ouro: #E9A800;         /* colete: só para "em andamento"/pendente */
+  --cor-ouro-escuro: #85570A;
+  --cor-ouro-suave: #FBF0D3;
+  --cor-erro: #B3261E;
+  --cor-erro-suave: #FBE9E7;
+
+  /* Tipografia — uma família de interface, uma de números/títulos grandes */
+  --fonte-corpo: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fonte-display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+  --t-hero: clamp(2.75rem, 5.2vw, 4.25rem);
+  --t-titulo: clamp(1.75rem, 3vw, 2rem);
+  --t-painel: 1.25rem;
+  --t-sub: 1.0625rem;
+  --t-corpo: 1rem;
+  --t-pequeno: 0.875rem;
+
+  /* Formas — retas e firmes, como uma folha de súmula */
+  --raio-pequeno: 8px;
+  --raio-medio: 10px;
+  --raio-grande: 12px;
+
+  /* Profundidade: borda primeiro, sombra quase nula */
+  --sombra-painel: 0 1px 0 rgba(21, 34, 27, 0.04);
+  --sombra-item: none;
+  --sombra-foco: 0 0 0 3px rgba(14, 124, 74, 0.28);
+}
+
+body { font-size: var(--t-corpo); line-height: 1.55; }
+
+h1, h2, h3, h4 { font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; }
+
+/* ---------- Marca: o círculo central do campo ---------- */
+.marca { font-family: var(--fonte-display); font-weight: 600; letter-spacing: -0.02em; font-size: 1.25rem; }
+.marca::before {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, var(--cor-grama) 0 2.5px, transparent 3px);
+  box-shadow: inset 0 0 0 2px var(--cor-grama);
+}
+
+/* ---------- Autenticação ---------- */
+.auth-painel {
+  background: var(--cor-giz);
+  border-right: 1px solid var(--cor-linha);
+  color: var(--cor-tinta);
+}
+
+.auth-frase {
+  font-family: var(--fonte-display);
+  font-size: var(--t-hero);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  margin-top: var(--espaco-7);
+}
+
+.auth-descricao { font-size: 1.125rem; line-height: 1.5; color: var(--cor-tinta-suave); max-width: 36ch; }
+
+.grafico-campo { color: var(--cor-grama); opacity: 0.5; right: -64px; bottom: -64px; width: 480px; height: 480px; }
+
+.auth-titulo { font-size: var(--t-titulo); font-weight: 600; letter-spacing: -0.02em; }
+
+@media (max-width: 860px) {
+  .auth-painel { border-right: 0; border-bottom: 1px solid var(--cor-linha); }
+  .auth-frase { margin-top: var(--espaco-6); }
+}
+
+/* ---------- Casca: barra sólida com linha de cal (sem blur) ---------- */
+.home-header {
+  background: var(--cor-branco);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  border-bottom: 1px solid var(--cor-linha);
+}
+
+.home-header > span, .home-header-usuario > span { font-weight: 500; }
+
+.home-header .link-simples { border-radius: var(--raio-pequeno); color: var(--cor-tinta-suave); font-weight: 500; }
+@media (hover: hover) and (pointer: fine) {
+  .home-header .link-simples:hover { background: var(--cor-giz); color: var(--cor-tinta); }
+}
+.home-header .link-simples:active { background: var(--cor-giz-forte); }
+
+/* ---------- Superfícies: folha branca + borda de cal ---------- */
+.painel { border: 1px solid var(--cor-linha); box-shadow: none; padding: var(--espaco-5); }
+
+.painel-titulo { font-size: var(--t-painel); font-weight: 600; letter-spacing: -0.015em; }
+
+.estado-vazio { background: var(--cor-giz); border: 1px dashed #C4CBBF; align-items: flex-start; text-align: left; }
+
+.lista-grupos, .lista-participantes, .lista-rodadas { box-shadow: none; border: 1px solid var(--cor-linha); border-radius: var(--raio-medio); }
+
+/* ---------- Formulários: campo branco com borda visível ---------- */
+.campo-label { font-weight: 500; font-size: var(--t-pequeno); color: var(--cor-tinta-suave); padding-left: 0; }
+
+.campo-input { background: var(--cor-branco); border: 1px solid #B9C2B5; border-radius: var(--raio-pequeno); }
+@media (hover: hover) and (pointer: fine) {
+  .campo-input:hover:not(:disabled):not(:focus) { background-color: var(--cor-branco); border-color: #8E9A8B; }
+}
+.campo-input:focus, .campo-input:focus-visible { border-color: var(--cor-grama); box-shadow: var(--sombra-foco); }
+.campo-input:disabled { background: var(--cor-giz); }
+
+/* ---------- Botões: retos, planos, sem brilho ---------- */
+.botao { border-radius: var(--raio-pequeno); font-weight: 600; letter-spacing: 0; min-height: 48px; }
+@media (pointer: fine) { .botao { min-height: 44px; } }
+
+.botao--primario { background: var(--cor-grama); box-shadow: none; }
+.botao--secundario { background: var(--cor-branco); color: var(--cor-tinta); border-color: #B9C2B5; }
+
+@media (hover: hover) and (pointer: fine) {
+  .botao--primario:hover:not(:disabled) { background: var(--cor-grama-escura); }
+  .botao--secundario:hover:not(:disabled) { background: var(--cor-giz); border-color: #8E9A8B; }
+}
+
+.mensagem-erro, .mensagem-sucesso { font-weight: 500; border: 1px solid transparent; }
+.mensagem-erro { border-color: #F0C7C2; }
+.mensagem-sucesso { border-color: #BFDCCB; }
+
+/* ---------- Etiquetas: texto de estado, sem pílulas ---------- */
+.badge-papel, .badge-status, .badge-checkin, .badge-pagamento, .badge-destaque, .badge-nota {
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+/* ---------- O elemento memorável: numerais de camisa ---------- */
+.ranking-pos,
+.wrapped-posicao {
+  font-family: var(--fonte-display);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1;
+  min-width: 40px;
+  color: var(--cor-grama);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagamento-resumo-card strong {
+  font-family: var(--fonte-display);
+  font-weight: 600;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--cor-tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao-time-titulo { font-family: var(--fonte-display); font-weight: 600; font-size: 1.25rem; color: var(--cor-tinta); }
+
+/* ---------- Wrapped: mesmo vocabulário, sem blur ---------- */
+.wrapped-story, .wrapped-premio, .wrapped-premiado-card, .wrapped-tabela {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.wrapped-story { box-shadow: none; border-radius: var(--raio-grande); }
+.wrapped-conteudo > h1 { font-family: var(--fonte-display); font-weight: 600; letter-spacing: -0.03em; }
+.wrapped-avatar, .wrapped-premiado-card strong { font-family: var(--fonte-display); font-weight: 600; }
+
+/* ---------- Ajustes da revisão ---------- */
+/* rótulos em caixa-alta e tracking aberto são "cara de template": frase normal */
+.subtitulo-secao,
+.wrapped-eyebrow,
+.wrapped-kicker,
+.wrapped-jogador-posicao,
+.cartao-time-titulo {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.subtitulo-secao { font-size: var(--t-sub); font-weight: 600; color: var(--cor-tinta); }
+
+/* campos lado a lado alinham pelo controle, mesmo quando um rótulo quebra em duas linhas */
+.formulario-linha { align-items: end; }

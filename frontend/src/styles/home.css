@@ -1,0 +1,199 @@
+/* Home: próxima rodada em destaque + peladas. O campo ("quadro tático") fica na página de cada pelada. */
+:root {
+  --cor-campo-verde: #12503A;
+  --cor-campo-linha: #CFE5D6;
+  --cor-campo-texto: #EAF3EC;
+  --cor-campo-suave: #B9D3C2;
+  --cor-eu: #F2C230;
+}
+
+.so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+  list-style: none;
+}
+
+/* Link com cara de botão (ex.: "Ver rodada") */
+a.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.quadro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-6);
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--espaco-6) var(--espaco-6) var(--espaco-8);
+  animation: aparece 160ms ease-out both;
+}
+
+.quadro-proxima { min-width: 0; padding-top: var(--espaco-4); }
+.quadro-resto { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: var(--espaco-5); align-items: start; }
+.quadro-resto > * { min-width: 0; }
+.quadro-resto .painel--criar { grid-column: 1 / -1; }
+
+.quadro-contexto { font-size: var(--t-pequeno); color: var(--cor-tinta-suave); margin-bottom: var(--espaco-2); }
+
+.quadro-titulo {
+  font-family: var(--fonte-display);
+  font-size: clamp(2.5rem, 4.6vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+.quadro-resumo { margin-top: var(--espaco-3); font-size: 1.0625rem; color: var(--cor-tinta-suave); max-width: 46ch; }
+
+.quadro-acoes { margin-top: var(--espaco-5); }
+.quadro-proxima .mensagem-erro { margin-top: var(--espaco-3); }
+
+/* ----- O campo ----- */
+.quadro-campo {
+  position: static;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-4);
+  padding: var(--espaco-5);
+  border-radius: var(--raio-grande);
+  background: var(--cor-campo-verde);
+  color: var(--cor-campo-texto);
+}
+
+.quadro-campo-topo { display: flex; justify-content: space-between; align-items: baseline; gap: var(--espaco-3); }
+.quadro-campo-topo h2 { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; color: var(--cor-campo-texto); }
+.quadro-campo-topo span { font-size: var(--t-pequeno); color: var(--cor-campo-suave); white-space: nowrap; }
+.quadro-campo-topo b { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.quadro-campo-nota { font-size: 0.8125rem; color: var(--cor-campo-suave); text-align: center; }
+
+.campo-svg { display: block; width: 100%; height: auto; max-height: 70vh; margin: 0 auto; }
+.quadro-campo--grupo .campo-svg { max-height: 460px; }
+.quadro-campo-local { font-size: var(--t-pequeno); color: var(--cor-campo-suave); margin-top: 2px; }
+.quadro-campo-acoes { justify-content: center; }
+.quadro-campo-acoes .botao--secundario { background: transparent; color: var(--cor-campo-texto); border-color: var(--cor-campo-linha); }
+.campo-linhas { fill: none; stroke: var(--cor-campo-linha); stroke-opacity: 0.55; stroke-width: 2; }
+.campo-centro { fill: var(--cor-campo-linha); fill-opacity: 0.7; }
+.campo-vaga { fill: none; stroke: var(--cor-campo-linha); stroke-opacity: 0.55; stroke-width: 2; stroke-dasharray: 5 5; }
+.campo-jogador { fill: var(--cor-campo-texto); }
+.campo-eu { fill: var(--cor-eu); }
+.campo-texto { fill: var(--cor-campo-verde); font: 600 15px var(--fonte-corpo); text-anchor: middle; }
+.campo-texto--eu { fill: var(--cor-tinta); }
+.campo-excedente { font-size: 0.8125rem; color: var(--cor-campo-suave); text-align: center; }
+
+/* ----- Listas da coluna esquerda ----- */
+.item-grupo { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--espaco-3); }
+.item-grupo-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.item-grupo-numero {
+  font-family: var(--fonte-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--cor-grama);
+  font-variant-numeric: tabular-nums;
+}
+
+.formulario--codigo { flex-direction: row; align-items: flex-end; gap: var(--espaco-3); }
+.formulario--codigo .campo { flex: 1 1 auto; }
+.formulario--codigo .botao { flex-shrink: 0; }
+.painel .mensagem-erro, .painel .mensagem-sucesso { margin-top: var(--espaco-3); }
+
+.painel--criar > summary {
+  cursor: pointer;
+  font-family: var(--fonte-display);
+  font-size: var(--t-painel);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.painel--criar > summary::-webkit-details-marker { display: none; }
+.painel--criar > summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--cor-tinta-suave);
+  border-bottom: 2px solid var(--cor-tinta-suave);
+  transform: rotate(45deg);
+  transition: transform 160ms var(--ease-out);
+}
+.painel--criar[open] > summary::after { transform: rotate(-135deg); }
+.painel--criar[open] > summary { margin-bottom: var(--espaco-4); }
+
+/* ----- Tela estreita ----- */
+@media (max-width: 760px) {
+  .quadro { padding: var(--espaco-4) var(--espaco-4) var(--espaco-8); gap: var(--espaco-5); }
+  .quadro-resto { grid-template-columns: minmax(0, 1fr); }
+  .quadro-campo { padding: var(--espaco-4); }
+}
+
+@media (max-width: 480px) {
+  .formulario--codigo { flex-direction: column; align-items: stretch; }
+}
+
+/* o número de jogadores nunca quebra em duas linhas (nem some quando o nome é longo) */
+.item-grupo .item-grupo-numero {
+  flex-shrink: 0;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+/* celular: atalhos do topo numa única linha rolável (regra mais tardia do app.css voltava a quebrar linha) */
+@media (max-width: 640px) {
+  .home-header .home-header-usuario {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+}
+
+/* ----- Cor: a próxima rodada vira o "gramado" da tela (30% estrutural), amarelo só no que importa ----- */
+.quadro-proxima--campo {
+  padding: var(--espaco-6);
+  border-radius: var(--raio-grande);
+  background: var(--cor-campo-verde);
+  color: var(--cor-campo-texto);
+}
+.quadro-proxima--campo .quadro-contexto,
+.quadro-proxima--campo .quadro-resumo { color: var(--cor-campo-suave); }
+.quadro-proxima--campo .quadro-titulo { color: #fff; }
+
+.quadro-vagas { display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--espaco-4); max-width: 460px; }
+.vaga { flex: 1 0 12px; max-width: 18px; height: 24px; border-radius: 3px; border: 1px dashed var(--cor-campo-linha); opacity: 0.55; box-sizing: border-box; }
+.vaga--cheia { background: var(--cor-campo-texto); border: 0; opacity: 1; }
+
+.quadro-proxima--campo .botao--primario { background: var(--cor-eu); color: #15221B; border-color: var(--cor-eu); }
+.quadro-proxima--campo .botao--secundario { background: transparent; color: #fff; border-color: var(--cor-campo-linha); }
+@media (hover: hover) and (pointer: fine) {
+  .quadro-proxima--campo .botao--primario:hover { background: #F7D257; }
+  .quadro-proxima--campo .botao--secundario:hover { background: rgba(255, 255, 255, 0.08); }
+}
+.quadro-proxima--campo .mensagem-erro { color: #FFD7D2; }
+
+.item-grupo { gap: var(--espaco-3); }
+.item-grupo-sigla {
+  flex: 0 0 40px; width: 40px; height: 40px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--fonte-display); font-size: 1rem; font-weight: 600;
+}
+.item-grupo-sigla--0 { background: #E1F0E6; color: #0B5A36; }
+.item-grupo-sigla--1 { background: #FBEFC4; color: #6B5200; }
+.item-grupo-sigla--2 { background: #DDE8EE; color: #23465C; }
+.item-grupo-info { flex: 1 1 auto; }
+.painel--lista .painel-titulo { color: var(--cor-campo-verde); }
+@media (max-width: 760px) { .quadro-proxima--campo { padding: var(--espaco-5) var(--espaco-4); } }

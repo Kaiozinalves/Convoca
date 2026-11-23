@@ -3,8 +3,10 @@ import { Link, useLocation } from "react-router-dom"; // NOVO: useLocation
 import { useAuth } from "../context/AuthContext";
 import { Input, Select } from "../components/Input";
 import { Button } from "../components/Button";
-import { criarGrupo, entrarNoGrupo, listarMeusGrupos } from "../api/grupo";
+import { buscarDetalhesGrupo, criarGrupo, entrarNoGrupo, listarMeusGrupos } from "../api/grupo";
+import { cancelarPresenca, confirmarPresenca, listarCheckinsDaRodada } from "../api/checkin";
 import { extrairMensagemErro } from "../constants/enums";
+import { escolherProximaRodada, formatarQuando } from "../utils/quando";
 
 const ENDERECO_INICIAL = {
   logradouro: "",
@@ -14,6 +16,11 @@ const ENDERECO_INICIAL = {
   estado: "",
   cep: "",
 };
+
+function siglaDoGrupo(nome) {
+  const letras = nome.trim().split(/\s+/).filter((w) => w.length > 2).slice(0, 2).map((w) => Array.from(w)[0]);
+  return (letras.join("") || Array.from(nome.trim())[0] || "?").toUpperCase();
+}
 
 export function Home() {
   const { usuario, sair } = useAuth();
@@ -56,6 +63,77 @@ export function Home() {
     setCarregandoGrupos(true);
     carregarGrupos().finally(() => setCarregandoGrupos(false));
   }, [carregarGrupos]);
+
+  // Próxima rodada agendada entre todas as peladas do usuário + quem já confirmou.
+  const [detalhes, setDetalhes] = useState({});
+  const [proxima, setProxima] = useState(null);
+  const [checkins, setCheckins] = useState([]);
+  const [erroPresenca, setErroPresenca] = useState(null);
+  const [mudandoPresenca, setMudandoPresenca] = useState(false);
+
+  useEffect(() => {
+    if (grupos.length === 0) {
+      setDetalhes({});
+      setProxima(null);
+      setCheckins([]);
+      return undefined;
+    }
+    let cancelado = false;
+    (async () => {
+      const resultados = await Promise.allSettled(grupos.map((g) => buscarDetalhesGrupo(g.id)));
+      if (cancelado) return;
+      const mapa = {};
+      const candidatas = [];
+      resultados.forEach((res, i) => {
+        if (res.status !== "fulfilled") return;
+        const grupo = grupos[i];
+        mapa[grupo.id] = { membros: res.value.participantes?.length ?? null };
+        const rodada = escolherProximaRodada(res.value.rodadas);
+        if (rodada) candidatas.push({ grupo, rodada });
+      });
+      candidatas.sort((a, b) =>
+        `${a.rodada.data} ${a.rodada.horario}`.localeCompare(`${b.rodada.data} ${b.rodada.horario}`)
+      );
+      const escolhida = candidatas[0] || null;
+      setDetalhes(mapa);
+      setProxima(escolhida);
+      if (!escolhida) {
+        setCheckins([]);
+        return;
+      }
+      try {
+        const lista = await listarCheckinsDaRodada(escolhida.rodada.id);
+        if (!cancelado) setCheckins(lista);
+      } catch {
+        if (!cancelado) setCheckins([]);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [grupos]);
+
+  const confirmados = checkins.filter((c) => c.statusCheckIn === "CONFIRMADO");
+  const euConfirmei = confirmados.some((c) => c.usuarioId === usuario.id);
+
+  async function alternarPresenca() {
+    if (!proxima) return;
+    setErroPresenca(null);
+    setMudandoPresenca(true);
+    try {
+      const rodadaId = proxima.rodada.id;
+      if (euConfirmei) {
+        await cancelarPresenca({ rodadaId, usuarioId: usuario.id });
+      } else {
+        await confirmarPresenca({ rodadaId, usuarioId: usuario.id });
+      }
+      setCheckins(await listarCheckinsDaRodada(rodadaId));
+    } catch (err) {
+      setErroPresenca(extrairMensagemErro(err, "Não foi possível atualizar sua presença agora."));
+    } finally {
+      setMudandoPresenca(false);
+    }
+  }
 
   function atualizarEndereco(campo, valor) {
     setEndereco((atual) => ({ ...atual, [campo]: valor }));
@@ -106,13 +184,19 @@ export function Home() {
     }
   }
 
+  const quando = proxima ? formatarQuando(proxima.rodada) : null;
+  const enderecoRodada = proxima ? proxima.rodada.endereco || proxima.grupo.endereco : null;
+  const localRodada = proxima
+    ? enderecoRodada?.logradouro || enderecoRodada?.bairro || enderecoRodada?.cidade || proxima.grupo.nome
+    : "";
+  const semGrupos = !carregandoGrupos && grupos.length === 0;
+
   return (
     <div className="home">
       <header className="home-header">
         <span className="marca marca--escura">Pelada</span>
         <div className="home-header-usuario">
           <span>Olá, {usuario?.nome?.split(" ")[0] || usuario?.apelido}</span>
-          {/* NOVO: atalhos pra busca de peladas (UC08) e free agents (UC07) */}
           <Link className="link-simples" to="/peladas-proximas">
             Buscar peladas
           </Link>
@@ -128,51 +212,145 @@ export function Home() {
         </div>
       </header>
 
-      <main className="home-conteudo">
-        <section className="painel painel--lista">
-          <h2 className="painel-titulo">Suas peladas</h2>
-
-          {carregandoGrupos && <p className="texto-suave">Carregando…</p>}
-
-          {!carregandoGrupos && grupos.length === 0 && (
-            <div className="estado-vazio">
-              <p>Você ainda não faz parte de nenhuma pelada.</p>
-              <p className="texto-suave">
-                Crie a primeira ou entre com um código de convite, ali ao lado.
+      <main className="quadro">
+        <section className={`quadro-proxima${proxima ? " quadro-proxima--campo" : ""}`} aria-label="Próxima rodada">
+          {proxima ? (
+            <>
+              <p className="quadro-contexto">Próxima rodada</p>
+              <h1 className="quadro-titulo">
+                {quando.dia}
+                {quando.hora && `, ${quando.hora}`}
+                <br />
+                {localRodada}
+              </h1>
+              <p className="quadro-resumo">
+                {proxima.grupo.nome}. {confirmados.length}{" "}
+                {confirmados.length === 1 ? "confirmado" : "confirmados"} até agora.
               </p>
-            </div>
-          )}
-
-          {!carregandoGrupos && grupos.length > 0 && (
-            <ul className="lista-grupos">
-              {grupos.map((grupo) => (
-                <li key={grupo.id}>
-                  <Link to={`/grupos/${grupo.id}`} className="item-grupo">
-                    <span className="item-grupo-nome">{grupo.nome}</span>
-                    <span className="item-grupo-local">
-                      {grupo.endereco?.cidade
-                        ? `${grupo.endereco.cidade} · ${grupo.codigoConvite}`
-                        : grupo.codigoConvite}
-                      {grupo.publica === false && " · Privada" /* NOVO */}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {!carregandoGrupos && !listaVemDoServidor && (
-            <p className="texto-suave texto-suave--nota">
-              Não consegui carregar suas peladas do servidor agora — confira
-              se o endpoint GET /api/grupos/meus já foi implementado e se o
-              backend está rodando.
-            </p>
+              <div
+                className="quadro-vagas"
+                role="img"
+                aria-label={`${Math.min(confirmados.length, 22)} de 22 vagas preenchidas`}
+              >
+                {Array.from({ length: 22 }, (_, i) => (
+                  <span key={i} className={i < confirmados.length ? "vaga vaga--cheia" : "vaga"} />
+                ))}
+              </div>
+              <div className="linha-acoes quadro-acoes">
+                <Button
+                  type="button"
+                  variante={euConfirmei ? "secundario" : "primario"}
+                  carregando={mudandoPresenca}
+                  onClick={alternarPresenca}
+                >
+                  {euConfirmei ? "Cancelar presença" : "Confirmar presença"}
+                </Button>
+                <Link
+                  className="botao botao--secundario"
+                  to={`/grupos/${proxima.grupo.id}/rodadas/${proxima.rodada.id}`}
+                >
+                  Ver rodada
+                </Link>
+              </div>
+              {erroPresenca && (
+                <p className="mensagem-erro" role="alert">
+                  {erroPresenca}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="quadro-contexto">Próxima rodada</p>
+              <h1 className="quadro-titulo">Nenhuma rodada marcada</h1>
+              <p className="quadro-resumo">
+                {semGrupos
+                  ? "Crie uma pelada ou entre com um código de convite para começar."
+                  : "Quando o admin de uma das suas peladas agendar a próxima rodada, ela aparece aqui."}
+              </p>
+            </>
           )}
         </section>
 
-        <div className="painel-coluna">
+        <div className="quadro-resto">
+          <section className="painel painel--lista">
+            <h2 className="painel-titulo">Suas peladas</h2>
+
+            {carregandoGrupos && <p className="texto-suave">Carregando…</p>}
+
+            {semGrupos && (
+              <div className="estado-vazio">
+                <p>Você ainda não faz parte de nenhuma pelada.</p>
+                <p className="texto-suave">Crie a primeira ou entre com um código de convite, logo abaixo.</p>
+              </div>
+            )}
+
+            {!carregandoGrupos && grupos.length > 0 && (
+              <ul className="lista-grupos">
+                {grupos.map((grupo) => {
+                  const membros = detalhes[grupo.id]?.membros;
+                  return (
+                    <li key={grupo.id}>
+                      <Link to={`/grupos/${grupo.id}`} className="item-grupo">
+                        <span className={`item-grupo-sigla item-grupo-sigla--${grupo.id % 3}`} aria-hidden="true">
+                          {siglaDoGrupo(grupo.nome)}
+                        </span>
+                        <span className="item-grupo-info">
+                          <span className="item-grupo-nome">{grupo.nome}</span>
+                          <span className="item-grupo-local">
+                            {grupo.endereco?.cidade
+                              ? `${grupo.endereco.cidade} · ${grupo.codigoConvite}`
+                              : grupo.codigoConvite}
+                            {grupo.publica === false && " · Privada"}
+                          </span>
+                        </span>
+                        {membros != null && (
+                          <span className="item-grupo-numero" aria-label={`${membros} jogadores`}>
+                            {membros}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {!carregandoGrupos && !listaVemDoServidor && (
+              <p className="texto-suave texto-suave--nota">
+                Não consegui carregar suas peladas do servidor agora — confira se o backend está rodando.
+              </p>
+            )}
+          </section>
+
           <section className="painel">
-            <h2 className="painel-titulo">Criar nova pelada</h2>
+            <h2 className="painel-titulo">Entrar com código de convite</h2>
+            <form className="formulario formulario--codigo" onSubmit={aoEntrarNoGrupo} noValidate>
+              <Input
+                id="codigoConvite"
+                label="Código de convite"
+                placeholder="Ex.: 8F3A1C"
+                required
+                value={codigoConvite}
+                onChange={(e) => setCodigoConvite(e.target.value.toUpperCase())}
+              />
+              <Button type="submit" variante="secundario" carregando={entrando}>
+                Entrar
+              </Button>
+            </form>
+            {erroEntrar && (
+              <p className="mensagem-erro" role="alert">
+                {erroEntrar}
+              </p>
+            )}
+            {entrouComSucesso && (
+              <p className="mensagem-sucesso" role="status">
+                Você entrou na pelada!
+              </p>
+            )}
+          </section>
+
+          <details className="painel painel--criar" key={semGrupos ? "vazio" : "cheio"} open={semGrupos}>
+            <summary>Criar nova pelada</summary>
 
             <form className="formulario" onSubmit={aoCriarGrupo} noValidate>
               <Input
@@ -184,7 +362,6 @@ export function Home() {
                 onChange={(e) => setNomeGrupo(e.target.value)}
               />
 
-              {/* NOVO: visibilidade da pelada, definida no cadastro */}
               <Select
                 id="visibilidade"
                 label="Visibilidade"
@@ -233,9 +410,7 @@ export function Home() {
                   label="UF"
                   maxLength={2}
                   value={endereco.estado}
-                  onChange={(e) =>
-                    atualizarEndereco("estado", e.target.value.toUpperCase())
-                  }
+                  onChange={(e) => atualizarEndereco("estado", e.target.value.toUpperCase())}
                 />
                 <Input
                   id="cep"
@@ -252,8 +427,7 @@ export function Home() {
               )}
               {grupoRecemCriado && (
                 <p className="mensagem-sucesso" role="status">
-                  Pelada criada! Código de convite:{" "}
-                  <strong>{grupoRecemCriado.codigoConvite}</strong> —
+                  Pelada criada! Código de convite: <strong>{grupoRecemCriado.codigoConvite}</strong> —
                   compartilha com o pessoal.
                 </p>
               )}
@@ -262,37 +436,7 @@ export function Home() {
                 Criar pelada
               </Button>
             </form>
-          </section>
-
-          <section className="painel">
-            <h2 className="painel-titulo">Entrar com código de convite</h2>
-
-            <form className="formulario" onSubmit={aoEntrarNoGrupo} noValidate>
-              <Input
-                id="codigoConvite"
-                label="Código de convite"
-                placeholder="Ex.: 8F3A1C"
-                required
-                value={codigoConvite}
-                onChange={(e) => setCodigoConvite(e.target.value.toUpperCase())}
-              />
-
-              {erroEntrar && (
-                <p className="mensagem-erro" role="alert">
-                  {erroEntrar}
-                </p>
-              )}
-              {entrouComSucesso && (
-                <p className="mensagem-sucesso" role="status">
-                  Você entrou na pelada!
-                </p>
-              )}
-
-              <Button type="submit" variante="secundario" carregando={entrando}>
-                Entrar na pelada
-              </Button>
-            </form>
-          </section>
+          </details>
         </div>
       </main>
     </div>

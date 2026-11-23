@@ -4,6 +4,7 @@ import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { TabelasEstatisticas } from "../components/TabelasEstatisticas";
 import { BuscaFreeAgentsGrupo } from "../components/BuscaFreeAgentsGrupo";
+import { ProximaRodadaCampo } from "../components/ProximaRodadaCampo";
 import { useAuth } from "../context/AuthContext";
 import { atualizarConfiguracaoAvaliacao, buscarDetalhesGrupo } from "../api/grupo";
 import {
@@ -282,6 +283,8 @@ export function GrupoDetalhes() {
 
         {!carregando && grupo && (
           <>
+            <ProximaRodadaCampo grupoId={id} rodadas={grupo.rodadas} usuarioId={usuario.id} />
+
             <section className="painel painel--form">
               <h2 className="painel-titulo">{grupo.nome}</h2>
               <p className="texto-suave">
