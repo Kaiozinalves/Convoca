@@ -1,7 +1,5 @@
 package com.pelmanager.entity;
 
-import com.pelmanager.entity.enums.PernaDominante;
-import com.pelmanager.entity.enums.Posicao;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -32,18 +30,6 @@ public class Usuario {
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
     private List<Participante> gruposQueParticipa;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "perna_dominante", length = 10)
-    private PernaDominante pernaDominante;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "posicao_primaria", length = 20)
-    private Posicao posicaoPrimaria; // ZAG, MEI, ATA ou GOL
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "posicao_secundaria", length = 20)
-    private Posicao posicaoSecundaria;
 
     @OneToMany(mappedBy = "avaliador", cascade = CascadeType.ALL)
     private List<Avaliacao> avaliacoesFeitas;

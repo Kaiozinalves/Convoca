@@ -32,19 +32,22 @@ public class CheckInService {
     private final ParticipanteRepository participanteRepository;
     private final PermissaoService permissaoService;
     private final PagamentoService pagamentoService;
+    private final PerfilPeladaService perfilPeladaService;
 
     public CheckInService(CheckInRepository checkInRepository,
                           RodadaRepository rodadaRepository,
                           UsuarioRepository usuarioRepository,
                           ParticipanteRepository participanteRepository,
                           PermissaoService permissaoService,
-                          PagamentoService pagamentoService) {
+                          PagamentoService pagamentoService,
+                          PerfilPeladaService perfilPeladaService) {
         this.checkInRepository = checkInRepository;
         this.rodadaRepository = rodadaRepository;
         this.usuarioRepository = usuarioRepository;
         this.participanteRepository = participanteRepository;
         this.permissaoService = permissaoService;
         this.pagamentoService = pagamentoService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
@@ -126,7 +129,7 @@ public class CheckInService {
                             usuario.getId(),
                             usuario.getNome(),
                             usuario.getApelido(),
-                            usuario.getPosicaoPrimaria(),
+                            perfilPeladaService.perfilDe(participante).getPosicaoPrimaria(),
                             status
                     );
                 })

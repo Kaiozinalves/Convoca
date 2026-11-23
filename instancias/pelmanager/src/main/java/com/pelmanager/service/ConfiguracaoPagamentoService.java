@@ -1,6 +1,7 @@
 package com.pelmanager.service;
 
 import com.pelmanager.dto.ConfiguracaoPagamentoDTO;
+import com.pelmanager.entity.ConfiguracaoPelada;
 import com.pelmanager.entity.GrupoPelada;
 import com.pelmanager.repository.GrupoPeladaRepository;
 import jakarta.transaction.Transactional;
@@ -12,11 +13,14 @@ import java.math.BigDecimal;
 public class ConfiguracaoPagamentoService {
     private final GrupoPeladaRepository grupoPeladaRepository;
     private final PermissaoService permissaoService;
+    private final PerfilPeladaService perfilPeladaService;
 
     public ConfiguracaoPagamentoService(GrupoPeladaRepository grupoPeladaRepository,
-                                        PermissaoService permissaoService) {
+                                        PermissaoService permissaoService,
+                                        PerfilPeladaService perfilPeladaService) {
         this.grupoPeladaRepository = grupoPeladaRepository;
         this.permissaoService = permissaoService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
@@ -43,19 +47,20 @@ public class ConfiguracaoPagamentoService {
             validarChavePIX(chavePix);
         }
 
-        grupo.setSistemaPagementoAtivo(ativo);
+        ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(grupo);
+        configuracao.setSistemaPagamentoAtivo(ativo);
         if (config.valorTotal() != null) {
-            grupo.setValorTotalPelada(config.valorTotal());
+            configuracao.setValorTotalPelada(config.valorTotal());
         } else if (!ativo) {
-            grupo.setValorTotalPelada(null);
+            configuracao.setValorTotalPelada(null);
         }
-        grupo.setChavePixGerente(chavePix != null && !chavePix.isEmpty() ? chavePix : null);
+        configuracao.setChavePixGerente(chavePix != null && !chavePix.isEmpty() ? chavePix : null);
         grupoPeladaRepository.save(grupo);
 
         return ConfiguracaoPagamentoDTO.builder()
-                .ativo(grupo.isSistemaPagementoAtivo())
-                .valorTotal(grupo.getValorTotalPelada())
-                .chavePixGerente(grupo.getChavePixGerente())
+                .ativo(configuracao.isSistemaPagamentoAtivo())
+                .valorTotal(configuracao.getValorTotalPelada())
+                .chavePixGerente(configuracao.getChavePixGerente())
                 .mensagem("Configuração salva com sucesso!")
                 .build();
     }
@@ -64,11 +69,12 @@ public class ConfiguracaoPagamentoService {
     public ConfiguracaoPagamentoDTO obterConfiguracao(Long grupoId) {
         GrupoPelada grupo = grupoPeladaRepository.findById(grupoId)
                 .orElseThrow(() -> new IllegalArgumentException("Grupo não encontrado"));
+        ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(grupo);
 
         return ConfiguracaoPagamentoDTO.builder()
-                .ativo(grupo.isSistemaPagementoAtivo())
-                .valorTotal(grupo.getValorTotalPelada())
-                .chavePixGerente(grupo.getChavePixGerente())
+                .ativo(configuracao.isSistemaPagamentoAtivo())
+                .valorTotal(configuracao.getValorTotalPelada())
+                .chavePixGerente(configuracao.getChavePixGerente())
                 .build();
     }
 

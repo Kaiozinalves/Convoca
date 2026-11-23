@@ -1,6 +1,7 @@
 package com.pelmanager.service;
 
 import com.pelmanager.entity.CheckIn;
+import com.pelmanager.entity.ConfiguracaoPelada;
 import com.pelmanager.entity.Pagamento;
 import com.pelmanager.entity.Rodada;
 import com.pelmanager.entity.enums.StatusCheckIn;
@@ -27,17 +28,20 @@ public class PagamentoService {
     private final GerarQrCodeService qrCodeService;
     private final RodadaRepository rodadaRepository;
     private final PermissaoService permissaoService;
+    private final PerfilPeladaService perfilPeladaService;
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
                             CheckInRepository checkInRepository,
                             GerarQrCodeService qrCodeService,
                             RodadaRepository rodadaRepository,
-                            PermissaoService permissaoService) {
+                            PermissaoService permissaoService,
+                            PerfilPeladaService perfilPeladaService) {
         this.pagamentoRepository = pagamentoRepository;
         this.checkInRepository = checkInRepository;
         this.qrCodeService = qrCodeService;
         this.rodadaRepository = rodadaRepository;
         this.permissaoService = permissaoService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
@@ -53,7 +57,8 @@ public class PagamentoService {
         Rodada rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
-        if (!rodada.getGrupo().isSistemaPagementoAtivo()) {
+        ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(rodada.getGrupo());
+        if (!configuracao.isSistemaPagamentoAtivo()) {
             return pagamentoRepository.findByRodadaId(rodadaId);
         }
 
@@ -76,7 +81,7 @@ public class PagamentoService {
             return pagamentoRepository.findByRodadaId(rodadaId);
         }
 
-        BigDecimal valorPorPessoa = rodada.getGrupo().calcularValorPorPessoa(confirmados.size());
+        BigDecimal valorPorPessoa = configuracao.calcularValorPorPessoa(confirmados.size());
         LocalDateTime agora = LocalDateTime.now();
 
         for (CheckIn checkIn : confirmados) {
@@ -137,7 +142,7 @@ public class PagamentoService {
 
     public String gerarQrCode(Long pagamentoId) {
         var pagamento = obterPagamento(pagamentoId);
-        String chavePixGerente = pagamento.getRodada().getGrupo().getChavePixGerente();
+        String chavePixGerente = perfilPeladaService.configuracaoDe(pagamento.getRodada().getGrupo()).getChavePixGerente();
 
         if (chavePixGerente == null || chavePixGerente.isEmpty()) {
             throw new RequisicaoInvalidaException("Chave PIX não configurada no grupo");
@@ -148,7 +153,7 @@ public class PagamentoService {
 
     public String gerarCopiaECola(Long pagamentoId) {
         var pagamento = obterPagamento(pagamentoId);
-        String chavePixGerente = pagamento.getRodada().getGrupo().getChavePixGerente();
+        String chavePixGerente = perfilPeladaService.configuracaoDe(pagamento.getRodada().getGrupo()).getChavePixGerente();
 
         if (chavePixGerente == null || chavePixGerente.isEmpty()) {
             throw new RequisicaoInvalidaException("Chave PIX não configurada no grupo");
@@ -205,7 +210,7 @@ public class PagamentoService {
             return;
         }
 
-        BigDecimal novoValor = rodada.getGrupo()
+        BigDecimal novoValor = perfilPeladaService.configuracaoDe(rodada.getGrupo())
                 .calcularValorPorPessoa((int) confirmadosAtuais);
 
         List<Pagamento> pendentes = obterPendentes(rodadaId);

@@ -2,6 +2,7 @@ package com.pelmanager.controller;
 
 import com.pelmanager.entity.Pagamento;
 import com.pelmanager.service.PagamentoService;
+import com.pelmanager.service.PerfilPeladaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,9 +14,11 @@ import java.util.Map;
 public class PagamentoController {
 
     private final PagamentoService pagamentoService;
+    private final PerfilPeladaService perfilPeladaService;
 
-    public PagamentoController(PagamentoService pagamentoService) {
+    public PagamentoController(PagamentoService pagamentoService, PerfilPeladaService perfilPeladaService) {
         this.pagamentoService = pagamentoService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @GetMapping("/{id}")
@@ -30,11 +33,11 @@ public class PagamentoController {
             Pagamento p = pagamentoService.obterPagamento(id);
             String qrCode = pagamentoService.gerarQrCode(id);
             String copiaECola = pagamentoService.gerarCopiaECola(id);
-            String chavePix = (p.getRodada() != null
-                    && p.getRodada().getGrupo() != null
-                    && p.getRodada().getGrupo().getChavePixGerente() != null)
-                    ? p.getRodada().getGrupo().getChavePixGerente()
-                    : "";
+            String chavePix = "";
+            if (p.getRodada() != null && p.getRodada().getGrupo() != null) {
+                String chave = perfilPeladaService.configuracaoDe(p.getRodada().getGrupo()).getChavePixGerente();
+                chavePix = chave != null ? chave : "";
+            }
             String valor = p.getValor() != null ? p.getValor().toPlainString() : "0.00";
             return ResponseEntity.ok(Map.of(
                     "qrCode", qrCode,

@@ -5,6 +5,7 @@ import com.pelmanager.dto.RodadaResponseDTO;
 import com.pelmanager.dto.RodadaStatusResponseDTO;
 import com.pelmanager.dto.request.EnderecoRequestDTO;
 import com.pelmanager.dto.request.RodadaRequestDTO;
+import com.pelmanager.entity.ConfiguracaoPelada;
 import com.pelmanager.entity.Endereco;
 import com.pelmanager.entity.GrupoPelada;
 import com.pelmanager.entity.Rodada;
@@ -32,19 +33,22 @@ public class RodadaService {
     private final EnderecoService enderecoService;
     private final PermissaoService permissaoService;
     private final PagamentoService pagamentoService;
+    private final PerfilPeladaService perfilPeladaService;
 
     public RodadaService(RodadaRepository rodadaRepository,
                          GrupoPeladaRepository grupoPeladaRepository,
                          EnderecoRepository enderecoRepository,
                          EnderecoService enderecoService,
                          PermissaoService permissaoService,
-                         PagamentoService pagamentoService) {
+                         PagamentoService pagamentoService,
+                         PerfilPeladaService perfilPeladaService) {
         this.rodadaRepository = rodadaRepository;
         this.grupoPeladaRepository = grupoPeladaRepository;
         this.enderecoRepository = enderecoRepository;
         this.enderecoService = enderecoService;
         this.permissaoService = permissaoService;
         this.pagamentoService = pagamentoService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
@@ -133,12 +137,12 @@ public class RodadaService {
         }
 
         LocalDateTime agora = LocalDateTime.now();
-        GrupoPelada grupo = rodada.getGrupo();
+        ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(rodada.getGrupo());
 
         rodada.setStatusRodada(StatusRodada.FINALIZADA);
         rodada.setFinalizadaEm(agora);
-        rodada.setVotacaoAte(agora.plusHours(grupo.getPrazoAvaliacaoHoras()));
-        rodada.setCategoriasVotacao(new HashSet<>(grupo.categoriasAtivas()));
+        rodada.setVotacaoAte(agora.plusHours(configuracao.getPrazoAvaliacaoHoras()));
+        rodada.setCategoriasVotacao(new HashSet<>(configuracao.getCategoriasAtivas()));
         return paraStatusDTO(rodadaRepository.save(rodada));
     }
 

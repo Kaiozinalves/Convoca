@@ -1,14 +1,11 @@
 package com.pelmanager.entity;
 
-import com.pelmanager.entity.enums.CategoriaVoto;
+import com.convoca.framework.domain.PerfilGrupo;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name = "grupo_peladas")
@@ -34,53 +31,10 @@ public class GrupoPelada {
 
     private Boolean publica = true;
 
-    @Column(nullable = false, columnDefinition = "boolean default false")
-    private boolean sistemaPagementoAtivo = false;
-
-    // Valor total da pelada
-    private BigDecimal valorTotalPelada;
-
-    private String chavePixGerente;
-
-
-
-    // Configuração da votação de fim de rodada. O "bagre" nasce desligado: o rótulo
-    // pode ser engraçado entre amigos, mas constrangedor em outros contextos.
-    @Column(name = "categoria_melhor_ativa", nullable = false, columnDefinition = "boolean default true")
-    private boolean categoriaMelhorAtiva = true;
-
-    @Column(name = "categoria_assistente_ativa", nullable = false, columnDefinition = "boolean default true")
-    private boolean categoriaAssistenteAtiva = true;
-
-    @Column(name = "categoria_bagre_ativa", nullable = false, columnDefinition = "boolean default false")
-    private boolean categoriaBagreAtiva = false;
-
-    @Column(name = "categoria_revelacao_ativa", nullable = false, columnDefinition = "boolean default true")
-    private boolean categoriaRevelacaoAtiva = true;
-
-    // Quantas horas a votação fica aberta depois que a rodada é finalizada.
-    @Column(name = "prazo_avaliacao_horas", nullable = false, columnDefinition = "integer default 24")
-    private int prazoAvaliacaoHoras = 24;
-
-    public Set<CategoriaVoto> categoriasAtivas() {
-        Set<CategoriaVoto> ativas = EnumSet.noneOf(CategoriaVoto.class);
-        if (categoriaMelhorAtiva) ativas.add(CategoriaVoto.MELHOR_JOGADOR);
-        if (categoriaAssistenteAtiva) ativas.add(CategoriaVoto.MELHOR_ASSISTENTE);
-        if (categoriaBagreAtiva) ativas.add(CategoriaVoto.BAGRE);
-        return ativas;
-    }
-
-    // Calcula valor por pessoa
-    public BigDecimal calcularValorPorPessoa(int quantidade) {
-        if (!sistemaPagementoAtivo || valorTotalPelada == null || quantidade <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return valorTotalPelada.divide(
-                BigDecimal.valueOf(quantidade),
-                2,
-                java.math.RoundingMode.HALF_UP
-        );
-    }
+    // Mesmo encaixe de Participante.perfil: o grupo tem 0..1 PerfilGrupo (no PelManager, ConfiguracaoPelada).
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "perfil_id")
+    private PerfilGrupo perfil;
 
     public boolean ehPublica() {
         return !Boolean.FALSE.equals(this.publica);

@@ -4,10 +4,12 @@ import com.pelmanager.dto.*;
 import com.pelmanager.dto.request.ConfiguracaoAvaliacaoRequestDTO;
 import com.pelmanager.dto.request.EntrarGrupoPeladaRequestDTO;
 import com.pelmanager.dto.request.GrupoPeladaRequestDTO;
+import com.pelmanager.entity.ConfiguracaoPelada;
 import com.pelmanager.entity.Endereco;
 import com.pelmanager.entity.GrupoPelada;
 import com.pelmanager.entity.Participante;
 import com.pelmanager.entity.Usuario;
+import com.pelmanager.entity.enums.CategoriaVoto;
 import com.pelmanager.entity.enums.Papel;
 import com.pelmanager.exception.CodigoConviteInvalidoException;
 import com.pelmanager.exception.RecursoNaoEncontradoException;
@@ -34,17 +36,20 @@ public class GrupoPeladaService {
     private final ParticipanteRepository participanteRepository;
     private final RodadaRepository rodadaRepository;
     private final PermissaoService permissaoService;
+    private final PerfilPeladaService perfilPeladaService;
 
     public GrupoPeladaService(GrupoPeladaRepository grupoRepository,
                               UsuarioRepository usuarioRepository,
                               ParticipanteRepository participanteRepository,
                               RodadaRepository rodadaRepository,
-                              PermissaoService permissaoService) {
+                              PermissaoService permissaoService,
+                              PerfilPeladaService perfilPeladaService) {
         this.grupoRepository = grupoRepository;
         this.usuarioRepository = usuarioRepository;
         this.participanteRepository = participanteRepository;
         this.rodadaRepository = rodadaRepository;
         this.permissaoService = permissaoService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
@@ -68,6 +73,7 @@ public class GrupoPeladaService {
         grupo.setDataCriacao(LocalDateTime.now());
         grupo.setEndereco(endereco);
         grupo.setPublica(dto.publica() == null || dto.publica());
+        grupo.setPerfil(new ConfiguracaoPelada());
 
         GrupoPelada grupoSalvo = grupoRepository.save(grupo);
 
@@ -77,6 +83,7 @@ public class GrupoPeladaService {
         admin.setGrupo(grupoSalvo);
         admin.setPapel(Papel.ADMIN);
         admin.setDataEntrada(LocalDateTime.now());
+        admin.setPerfil(perfilPeladaService.novoPerfilPara(dono));
 
         participanteRepository.save(admin);
 
@@ -109,6 +116,7 @@ public class GrupoPeladaService {
         novoParticipante.setGrupo(grupo);
         novoParticipante.setPapel(Papel.MEMBRO);
         novoParticipante.setDataEntrada(LocalDateTime.now());
+        novoParticipante.setPerfil(perfilPeladaService.novoPerfilPara(jogador));
 
         participanteRepository.save(novoParticipante);
     }
@@ -147,10 +155,11 @@ public class GrupoPeladaService {
                 .map(RodadaService::paraRodadaDTO)
                 .toList();
 
+        ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(grupo);
         ConfiguracaoPagamentoDTO configPagamento = ConfiguracaoPagamentoDTO.builder()
-                .ativo(grupo.isSistemaPagementoAtivo())
-                .valorTotal(grupo.getValorTotalPelada())
-                .chavePixGerente(grupo.getChavePixGerente())
+                .ativo(configuracao.isSistemaPagamentoAtivo())
+                .valorTotal(configuracao.getValorTotalPelada())
+                .chavePixGerente(configuracao.getChavePixGerente())
                 .build();
 
         return new GrupoPeladaDetalhesResponseDTO(
@@ -182,13 +191,14 @@ public class GrupoPeladaService {
                     "O prazo da votação deve ficar entre 1 e " + PRAZO_MAXIMO_HORAS + " horas.");
         }
 
-        grupo.setCategoriaMelhorAtiva(dto.melhorJogadorAtiva());
-        grupo.setCategoriaAssistenteAtiva(dto.melhorAssistenteAtiva());
-        grupo.setCategoriaBagreAtiva(dto.bagreAtiva());
+        ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(grupo);
+        configuracao.definirCategoria(CategoriaVoto.MELHOR_JOGADOR, dto.melhorJogadorAtiva());
+        configuracao.definirCategoria(CategoriaVoto.MELHOR_ASSISTENTE, dto.melhorAssistenteAtiva());
+        configuracao.definirCategoria(CategoriaVoto.BAGRE, dto.bagreAtiva());
         if (dto.revelacaoAtiva() != null) {
-            grupo.setCategoriaRevelacaoAtiva(dto.revelacaoAtiva());
+            configuracao.definirCategoria(CategoriaVoto.REVELACAO, dto.revelacaoAtiva());
         }
-        grupo.setPrazoAvaliacaoHoras(dto.prazoHoras());
+        configuracao.setPrazoAvaliacaoHoras(dto.prazoHoras());
 
         return paraConfiguracaoDTO(grupoRepository.save(grupo));
     }
@@ -207,12 +217,13 @@ public class GrupoPeladaService {
     }
 
     private ConfiguracaoAvaliacaoDTO paraConfiguracaoDTO(GrupoPelada grupo) {
+        ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(grupo);
         return new ConfiguracaoAvaliacaoDTO(
-                grupo.isCategoriaMelhorAtiva(),
-                grupo.isCategoriaAssistenteAtiva(),
-                grupo.isCategoriaBagreAtiva(),
-                grupo.isCategoriaRevelacaoAtiva(),
-                grupo.getPrazoAvaliacaoHoras()
+                configuracao.categoriaAtiva(CategoriaVoto.MELHOR_JOGADOR),
+                configuracao.categoriaAtiva(CategoriaVoto.MELHOR_ASSISTENTE),
+                configuracao.categoriaAtiva(CategoriaVoto.BAGRE),
+                configuracao.categoriaAtiva(CategoriaVoto.REVELACAO),
+                configuracao.getPrazoAvaliacaoHoras()
         );
     }
 

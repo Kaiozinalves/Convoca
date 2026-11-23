@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.PerfilAtividade;
 import com.pelmanager.entity.enums.Papel;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -25,6 +26,10 @@ public class Participante {
     @Enumerated(EnumType.STRING)
     @Column(name = "papel", nullable = false)
     private Papel papel;
+
+    @JoinColumn(name = "perfil_id")
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    private PerfilAtividade perfil;
 
     LocalDateTime dataEntrada;
 

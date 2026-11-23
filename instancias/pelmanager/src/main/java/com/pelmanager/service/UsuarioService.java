@@ -7,6 +7,7 @@ import com.pelmanager.dto.request.LoginRequestDTO;
 import com.pelmanager.dto.request.UsuarioRequestDTO;
 import com.pelmanager.dto.request.UsuarioUpdateRequestDTO;
 import com.pelmanager.entity.Endereco;
+import com.pelmanager.entity.PreferenciaJogador;
 import com.pelmanager.entity.Usuario;
 import com.pelmanager.exception.EmailJaCadastradoException;
 import com.pelmanager.exception.RecursoNaoEncontradoException;
@@ -20,10 +21,13 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final FreeAgentService freeAgentService;
+    private final PerfilPeladaService perfilPeladaService;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, FreeAgentService freeAgentService) {
+    public UsuarioService(UsuarioRepository usuarioRepository, FreeAgentService freeAgentService,
+                          PerfilPeladaService perfilPeladaService) {
         this.usuarioRepository = usuarioRepository;
         this.freeAgentService = freeAgentService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
@@ -37,12 +41,11 @@ public class UsuarioService {
         usuario.setApelido(dto.apelido());
         usuario.setEmail(dto.email());
         usuario.setSenha(dto.senha());
-        usuario.setPernaDominante(dto.peDominante());
-        usuario.setPosicaoPrimaria(dto.posicaoPrimaria());
-        usuario.setPosicaoSecundaria(dto.posicaoSecundaria());
         usuario.setEndereco(atualizarEndereco(null, dto.endereco()));
 
-        return paraDTO(usuarioRepository.save(usuario), true);
+        Usuario salvo = usuarioRepository.save(usuario);
+        perfilPeladaService.salvarPreferencia(salvo, dto.posicaoPrimaria(), dto.posicaoSecundaria(), dto.peDominante());
+        return paraDTO(salvo, true);
     }
 
     public UsuarioResponseDTO autenticar(LoginRequestDTO dto) {
@@ -69,12 +72,10 @@ public class UsuarioService {
 
         usuario.setNome(dto.nome());
         usuario.setApelido(dto.apelido());
-        usuario.setPernaDominante(dto.peDominante());
-        usuario.setPosicaoPrimaria(dto.posicaoPrimaria());
-        usuario.setPosicaoSecundaria(dto.posicaoSecundaria());
         usuario.setEndereco(atualizarEndereco(usuario.getEndereco(), dto.endereco()));
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuario);
+        perfilPeladaService.salvarPreferencia(usuarioAtualizado, dto.posicaoPrimaria(), dto.posicaoSecundaria(), dto.peDominante());
         freeAgentService.sincronizarEndereco(usuarioAtualizado);
         return paraDTO(usuarioAtualizado, false);
     }
@@ -120,15 +121,16 @@ public class UsuarioService {
                 endereco.getEstado(),
                 endereco.getCep()
         );
+        PreferenciaJogador preferencia = perfilPeladaService.preferenciaDe(usuario.getId());
 
         return new UsuarioResponseDTO(
                 usuario.getId(),
                 usuario.getNome(),
                 usuario.getApelido(),
                 usuario.getEmail(),
-                usuario.getPernaDominante(),
-                usuario.getPosicaoPrimaria(),
-                usuario.getPosicaoSecundaria(),
+                preferencia.getPernaDominante(),
+                preferencia.getPosicaoPrimaria(),
+                preferencia.getPosicaoSecundaria(),
                 enderecoDTO
         );
     }

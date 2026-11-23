@@ -5,6 +5,7 @@ import com.pelmanager.dto.JogadorTimeResponseDTO;
 import com.pelmanager.dto.SorteioResponseDTO;
 import com.pelmanager.dto.TimeResponseDTO;
 import com.pelmanager.entity.CheckIn;
+import com.pelmanager.entity.PerfilJogador;
 import com.pelmanager.entity.Rodada;
 import com.pelmanager.entity.Time;
 import com.pelmanager.entity.Usuario;
@@ -35,15 +36,18 @@ public class SorteioService {
     private final RodadaRepository rodadaRepository;
     private final TimeRepository timeRepository;
     private final PermissaoService permissaoService;
+    private final PerfilPeladaService perfilPeladaService;
 
     public SorteioService(CheckInRepository checkInRepository, AvaliacaoRepository avaliacaoRepository,
                           RodadaRepository rodadaRepository, TimeRepository timeRepository,
-                          PermissaoService permissaoService) {
+                          PermissaoService permissaoService,
+                          PerfilPeladaService perfilPeladaService) {
         this.checkInRepository = checkInRepository;
         this.avaliacaoRepository = avaliacaoRepository;
         this.rodadaRepository = rodadaRepository;
         this.timeRepository = timeRepository;
         this.permissaoService = permissaoService;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
@@ -114,8 +118,7 @@ public class SorteioService {
 
         // Separa quem pode jogar de goleiro do resto
         List<CheckIn> goleiros = new ArrayList<>(confirmados.stream()
-                .filter(c -> c.getUsuario().getPosicaoPrimaria() == Posicao.GOLEIRO
-                        || c.getUsuario().getPosicaoSecundaria() == Posicao.GOLEIRO)
+                .filter(c -> podeSerGoleiro(perfil(c)))
                 .toList());
         Collections.shuffle(goleiros);
 
@@ -185,7 +188,7 @@ public class SorteioService {
                             c.getUsuario().getId(),
                             c.getUsuario().getNome(),
                             c.getUsuario().getApelido(),
-                            c.getUsuario().getPosicaoPrimaria()
+                            perfil(c).getPosicaoPrimaria()
                     ))
                     .toList();
 
@@ -209,10 +212,7 @@ public class SorteioService {
     private void validarQuantidadeMinimaDeGoleiros(List<CheckIn> confirmados, int numTimes) {
         int goleirosMinimos = Math.max(2, numTimes);
         long goleirosDisponiveis = confirmados.stream()
-                .map(CheckIn::getUsuario)
-                .filter(Objects::nonNull)
-                .filter(usuario -> usuario.getPosicaoPrimaria() == Posicao.GOLEIRO
-                        || usuario.getPosicaoSecundaria() == Posicao.GOLEIRO)
+                .filter(c -> podeSerGoleiro(perfil(c)))
                 .count();
 
         if (goleirosDisponiveis < goleirosMinimos) {
@@ -228,7 +228,19 @@ public class SorteioService {
             Usuario u = c.getUsuario();
             Double media = avaliacaoRepository.calcularMediaDoJogador(u.getId());
             double overallFinal = (media != null) ? media : 5.0;
-            return new JogadorSorteioDTO(c, u.getPosicaoPrimaria(), u.getPosicaoSecundaria(), overallFinal);
+            PerfilJogador perfil = perfil(c);
+            return new JogadorSorteioDTO(c, perfil.getPosicaoPrimaria(), perfil.getPosicaoSecundaria(), overallFinal);
         }).toList();
+    }
+
+    // Temporário: no passo 3 o CheckIn passa a apontar para o Participante e isto vira checkIn.getParticipante().
+    private PerfilJogador perfil(CheckIn checkIn) {
+        return perfilPeladaService.perfilNoGrupo(
+                checkIn.getUsuario().getId(), checkIn.getRodada().getGrupo().getId());
+    }
+
+    private static boolean podeSerGoleiro(PerfilJogador perfil) {
+        return perfil.getPosicaoPrimaria() == Posicao.GOLEIRO
+                || perfil.getPosicaoSecundaria() == Posicao.GOLEIRO;
     }
 }

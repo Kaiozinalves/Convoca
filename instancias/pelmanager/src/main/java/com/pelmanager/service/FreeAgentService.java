@@ -5,6 +5,7 @@ import com.pelmanager.dto.request.FreeAgentRequestDTO;
 import com.pelmanager.entity.Endereco;
 import com.pelmanager.entity.FreeAgent;
 import com.pelmanager.entity.GrupoPelada;
+import com.pelmanager.entity.PreferenciaJogador;
 import com.pelmanager.entity.Usuario;
 import com.pelmanager.entity.enums.Posicao;
 import com.pelmanager.exception.RecursoNaoEncontradoException;
@@ -32,17 +33,20 @@ public class FreeAgentService {
     private final GrupoPeladaRepository grupoRepository;
     private final ParticipanteRepository participanteRepository;
     private final AvaliacaoRepository avaliacaoRepository;
+    private final PerfilPeladaService perfilPeladaService;
 
     public FreeAgentService(FreeAgentRepository freeAgentRepository,
                             UsuarioRepository usuarioRepository,
                             GrupoPeladaRepository grupoRepository,
                             ParticipanteRepository participanteRepository,
-                            AvaliacaoRepository avaliacaoRepository) {
+                            AvaliacaoRepository avaliacaoRepository,
+                            PerfilPeladaService perfilPeladaService) {
         this.freeAgentRepository = freeAgentRepository;
         this.usuarioRepository = usuarioRepository;
         this.grupoRepository = grupoRepository;
         this.participanteRepository = participanteRepository;
         this.avaliacaoRepository = avaliacaoRepository;
+        this.perfilPeladaService = perfilPeladaService;
     }
 
 
@@ -116,9 +120,11 @@ public class FreeAgentService {
                 .stream()
                 .filter(fa -> estadoFinal == null || fa.getEstado() == null
                         || fa.getEstado().equalsIgnoreCase(estadoFinal.trim()))
-                .filter(fa -> posicao == null
-                        || fa.getUsuario().getPosicaoPrimaria() == posicao
-                        || fa.getUsuario().getPosicaoSecundaria() == posicao)
+                .filter(fa -> {
+                    if (posicao == null) return true;
+                    PreferenciaJogador preferencia = perfilPeladaService.preferenciaDe(fa.getUsuario().getId());
+                    return preferencia.getPosicaoPrimaria() == posicao || preferencia.getPosicaoSecundaria() == posicao;
+                })
                 .filter(fa -> grupoId == null
                         || !Boolean.TRUE.equals(
                         participanteRepository.existsByUsuarioIdAndGrupoId(fa.getUsuario().getId(), grupoId)))
@@ -139,14 +145,15 @@ public class FreeAgentService {
         Usuario u = fa.getUsuario();
         Double media = avaliacaoRepository.calcularMediaDoJogador(u.getId());
         Double mediaArredondada = media == null ? null : Math.round(media * 10) / 10.0;
+        PreferenciaJogador preferencia = perfilPeladaService.preferenciaDe(u.getId());
 
         return new FreeAgentResponseDTO(
                 u.getId(),
                 u.getNome(),
                 u.getApelido(),
-                u.getPosicaoPrimaria(),
-                u.getPosicaoSecundaria(),
-                u.getPernaDominante(),
+                preferencia.getPosicaoPrimaria(),
+                preferencia.getPosicaoSecundaria(),
+                preferencia.getPernaDominante(),
                 fa.getCidade(),
                 fa.getEstado(),
                 fa.getBairro(),
