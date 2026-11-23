@@ -31,4 +31,5 @@ build/
 
 ### VS Code ###
 .vscode/
-frontend/_to_delete/
+instancias/pelmanager/frontend/_to_delete/
+.claude/settings.local.json

@@ -1,136 +1,103 @@
-# PelManager
+# Convoca
 
-Aplicação web para organizar peladas de futebol. O projeto reúne uma API REST em Java/Spring Boot e uma interface web em React. A API usa PostgreSQL para persistir usuários, grupos, endereços e rodadas.
+**Convoca** é um framework em Java/Spring Boot para criar aplicações de gestão de **grupos que se reúnem periodicamente**: pelada, noite de esportes com amigos, mutirão de ação social e qualquer outra atividade em que alguém convoca, as pessoas confirmam presença e o encontro acontece.
 
-## Funcionalidades
+O framework concentra o que é comum a todas essas atividades (os **pontos fixos**) e expõe **pontos variáveis** (hot spots) para que cada aplicação defina o que é específico da sua atividade. Cada aplicação construída sobre o Convoca é uma **instância** independente do framework.
 
-- Cadastro, login e edição de perfil de jogadores.
-- Criação de grupos de pelada, convite por código e consulta dos grupos dos quais o jogador participa.
-- Agendamento e finalização de rodadas.
-- Check-in de presença.
-- Sorteio aleatório ou balanceado de times. O sorteio balanceado considera posição e avaliações.
-- Avaliação de jogadores após a rodada.
-- Interface em português, adaptada para desktop e dispositivos móveis.
+Projeto desenvolvido para a disciplina de Projeto Detalhado de Software (DIM0138, UFRN).
+
+## Instâncias
+
+| Instância | Pasta | Atividade | Situação |
+|---|---|---|---|
+| **PelManager** | [`instancias/pelmanager`](instancias/pelmanager/README.md) | Peladas de futebol: rodadas, check-in, sorteio de times, avaliações, votações e pagamentos | Aplicação existente, sendo migrada para o framework |
+| **Noite de Esportes** | `instancias/noite-esportes` | Noite de esportes com amigos | Esqueleto |
+| **Ação Social** | `instancias/acao-social` | Grupo que se reúne para uma ação social | Esqueleto |
+
+O PelManager original, de antes da criação do framework, está preservado em [Kaiozinalves/pelmanager](https://github.com/Kaiozinalves/pelmanager).
+
+## Arquitetura
+
+```text
+             ┌─────────────────────────── Convoca (framework) ───────────────────────────┐
+             │  domain · repository · service  ← pontos fixos                            │
+             │  hotspot                         ← interfaces dos pontos variáveis         │
+             └──────────────▲──────────────────────────▲─────────────────────────▲───────┘
+                            │ depende                  │ depende                 │ depende
+             ┌──────────────┴─────────┐  ┌─────────────┴──────────┐  ┌───────────┴────────────┐
+             │ PelManager             │  │ Noite de Esportes      │  │ Ação Social            │
+             │ controllers · DTOs     │  │ controllers · DTOs     │  │ controllers · DTOs     │
+             │ impl. dos hot spots    │  │ impl. dos hot spots    │  │ impl. dos hot spots    │
+             │ frontend (React)       │  │ frontend               │  │ frontend               │
+             └────────────────────────┘  └────────────────────────┘  └────────────────────────┘
+```
+
+Decisões de projeto:
+
+- **Inversão de controle:** os serviços do framework conduzem os fluxos e, nos pontos que variam, chamam as implementações de hot spot fornecidas pela instância (injetadas pelo Spring).
+- **Composição em vez de herança:** os atributos específicos de cada atividade não estendem as entidades do framework. Eles são compostos a elas por meio dos tipos definidos em `hotspot`.
+- **O framework termina na camada de serviço:** controllers REST, DTOs da API e o tratamento HTTP de exceções (`@RestControllerAdvice`) ficam em cada instância. Assim, cada aplicação define as próprias rotas e contratos (o PelManager mantém `/api/grupos`, `/api/rodadas`, `/api/checkins` etc.).
+- **Instâncias são aplicações separadas:** cada uma tem a sua classe `@SpringBootApplication`, o seu banco e o seu frontend.
+
+### Pontos fixos e pontos variáveis
+
+> **A preencher com base nos diagramas do projeto.**
+
+| Tipo | Elemento | Descrição |
+|---|---|---|
+| Ponto fixo | _…_ | _…_ |
+| Hot spot | _…_ | _…_ |
+
+## Estrutura do repositório
+
+```text
+.
+├── pom.xml                         # POM pai: módulos e versões comuns
+├── mvnw, mvnw.cmd, .mvn/           # Maven Wrapper
+├── framework/                      # convoca-framework (biblioteca, sem main)
+│   └── src/main/java/com/convoca/framework/
+│       ├── domain/                 # entidades genéricas (+ enums/)
+│       ├── repository/             # repositórios Spring Data JPA
+│       ├── service/                # fluxos fixos
+│       ├── hotspot/                # interfaces dos pontos variáveis
+│       ├── dto/                    # objetos na fronteira dos serviços
+│       └── exception/              # exceções de negócio genéricas
+└── instancias/
+    ├── pelmanager/                 # com.pelmanager: API + frontend/
+    ├── noite-esportes/             # com.noiteesportes
+    └── acao-social/                # com.acaosocial
+```
+
+Cada pacote do framework tem um `package-info.java` descrevendo a sua responsabilidade.
 
 ## Tecnologias
 
-- **Backend:** Java 17, Spring Boot 4, Spring MVC, Spring Data JPA, Hibernate, Maven e PostgreSQL.
-- **Frontend:** React 19, React Router, Axios, Vite e npm.
-- **Documentação da API:** OpenAPI/Swagger UI via Springdoc.
+- **Framework e backends:** Java 17, Spring Boot 4, Spring Data JPA/Hibernate, Bean Validation, Lombok, Maven multi-módulo.
+- **Banco de dados:** PostgreSQL (um banco por instância).
+- **Frontends:** React + Vite.
 
-## Requisitos
+## Como compilar e executar
 
-- JDK 17 ou superior.
-- Node.js `^20.19.0` ou `>=22.12.0` e npm (versões exigidas pelo Vite deste projeto).
-- PostgreSQL instalado e em execução.
+Requisitos: JDK 17 ou superior, PostgreSQL e Node.js (para os frontends).
 
-## Como executar localmente
-
-Abra dois terminais na raiz do repositório: um para a API e outro para a interface.
-
-### 1. Preparar o banco de dados
-
-Crie um banco PostgreSQL chamado `pelmanager_db`, por exemplo, usando `psql`:
-
-```sql
-CREATE DATABASE pelmanager_db;
-```
-
-O Spring Boot cria/atualiza as tabelas automaticamente (`spring.jpa.hibernate.ddl-auto=update`). Configure a conexão da API com variáveis de ambiente antes de iniciar. No PowerShell:
-
-```powershell
-$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5432/pelmanager_db"
-$env:SPRING_DATASOURCE_USERNAME = "postgres"
-$env:SPRING_DATASOURCE_PASSWORD = "sua_senha_local"
-```
-
-No macOS/Linux, use os equivalentes `export SPRING_DATASOURCE_URL=...`, `export SPRING_DATASOURCE_USERNAME=...` e `export SPRING_DATASOURCE_PASSWORD=...`. Ajuste URL, usuário e senha para a instalação local. Essas variáveis substituem os valores padrão de `src/main/resources/application.properties`; não compartilhe credenciais reais.
-
-### 2. Iniciar o backend
-
-Na raiz do projeto:
-
-```powershell
-./mvnw.cmd spring-boot:run
-```
-
-No macOS/Linux:
+Na raiz do repositório, compile e instale o framework e todas as instâncias:
 
 ```bash
-./mvnw spring-boot:run
+./mvnw clean install
 ```
 
-O Maven Wrapper baixa a versão configurada do Maven na primeira execução. A API ficará disponível em `http://localhost:8080/api`. A interface Swagger fica em `http://localhost:8080/swagger-ui/index.html`.
-
-### 3. Iniciar o frontend
-
-Em outro terminal:
-
-```powershell
-cd frontend
-npm install
-if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-npm run dev
-```
-
-Se ainda não existir, crie `frontend/.env` copiando `.env.example` (PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`). Confira se ele aponta para a API local:
-
-```dotenv
-VITE_API_URL=http://localhost:8080/api
-```
-
-Abra `http://localhost:5173` no navegador. Mantenha os dois processos em execução enquanto usa a aplicação.
-
-## Comandos úteis
-
-Execute a partir de `frontend/`:
+Para subir uma instância (exemplo: PelManager):
 
 ```bash
-npm run dev      # servidor de desenvolvimento
-npm run build    # gera o build de produção em frontend/dist
-npm run preview  # pré-visualiza o build localmente
-npm run lint     # análise estática com oxlint
+./mvnw -pl instancias/pelmanager spring-boot:run
 ```
 
-Execute a partir da raiz para compilar ou rodar os testes do backend:
+No Windows, use `./mvnw.cmd`. A configuração de banco e do frontend de cada instância está no README dela, como o [README do PelManager](instancias/pelmanager/README.md).
 
-```bash
-./mvnw clean package
-./mvnw test
-```
+## Como criar uma nova instância
 
-No Windows, use `./mvnw.cmd` no lugar de `./mvnw`.
-
-## Organização do repositório
-
-```text
-src/main/java/com/pelmanager/   # API: controllers, serviços, entidades, DTOs e repositórios
-src/main/resources/             # configuração do Spring Boot
-src/test/                       # testes do backend
-frontend/src/api/                # chamadas HTTP para a API
-frontend/src/components/         # componentes reutilizáveis
-frontend/src/context/             # estado de sessão do usuário
-frontend/src/pages/               # telas da aplicação
-frontend/src/styles/              # estilos e tokens visuais
-```
-
-## Principais rotas da API
-
-Todas as rotas usam o prefixo `/api`.
-
-| Recurso | Rotas |
-|---|---|
-| Usuários | `POST /usuarios`, `POST /usuarios/login`, `GET /usuarios/{id}`, `PUT /usuarios/{id}` |
-| Grupos | `POST /grupos`, `POST /grupos/entrar`, `GET /grupos/meus?usuarioId={id}`, `GET /grupos/{id}` |
-| Rodadas | `POST /rodadas`, `PATCH /rodadas/{id}/finalizar` |
-| Check-ins | `POST /checkins`, `GET /checkins/rodada/{rodadaId}` |
-| Sorteios | `POST /sorteios`, `POST /sorteios/aleatorio`, `GET /sorteios/rodada/{rodadaId}` |
-| Avaliações | `POST /avaliacoes`, `GET /avaliacoes/rodada/{rodadaId}` |
-
-A documentação interativa em `/swagger-ui/index.html` lista os contratos expostos pela API.
-
-## Observações
-
-- O login atual verifica as credenciais pela API, mas ainda não usa Spring Security, JWT ou tokens de sessão. A proteção de rotas no frontend é uma barreira de navegação do cliente, não um mecanismo de autorização do backend.
-- O frontend permite agendar rodada no endereço do grupo; não há fluxo de interface para selecionar um endereço alternativo.
-- Para usar em produção, configure credenciais e banco adequados, autenticação e autorização no backend e ajuste CORS para os domínios reais da aplicação.
+1. Crie o módulo em `instancias/<nome>/` com um `pom.xml` que tenha `convoca-parent` como `<parent>` e dependa de `convoca-framework`.
+2. Adicione o módulo em `<modules>` no `pom.xml` da raiz.
+3. Crie a classe `@SpringBootApplication` e ative o `spring-boot-maven-plugin`.
+4. Implemente as interfaces de `com.convoca.framework.hotspot` para a sua atividade.
+5. Escreva os controllers e DTOs da API, chamando os serviços do framework.

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instância 2: noite de esportes com amigos.
+  Esqueleto: depende do framework e vai implementar os hot spots + controllers próprios.
+  Quando a classe Application (@SpringBootApplication) existir, descomente o
+  spring-boot-maven-plugin abaixo para gerar o jar executável.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>com.convoca</groupId>
+		<artifactId>convoca-parent</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>../../pom.xml</relativePath>
+	</parent>
+
+	<groupId>com.noiteesportes</groupId>
+	<artifactId>noite-esportes</artifactId>
+	<packaging>jar</packaging>
+	<name>noite-esportes</name>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.convoca</groupId>
+			<artifactId>convoca-framework</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+	</dependencies>
+
+	<!--
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+	-->
+
+</project>
