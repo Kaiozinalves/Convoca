@@ -30,8 +30,8 @@
 	<modules>
 		<module>framework</module>
 		<module>instancias/pelmanager</module>
-		<module>instancias/noite-esportes</module>
-		<module>instancias/acao-social</module>
+		<module>instancias/esports</module>
+		<module>instancias/voluntariado</module>
 	</modules>
 
 	<!-- Versões gerenciadas num lugar só; os módulos declaram a dependência sem versão -->

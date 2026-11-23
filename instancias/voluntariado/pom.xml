@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Instância 3: grupo que se reúne para uma ação social.
+  Instância 3: Grupo de voluntariado (ação social mensal, com tarefas divididas entre os voluntários).
   Esqueleto: depende do framework e vai implementar os hot spots + controllers próprios.
   Quando a classe Application (@SpringBootApplication) existir, descomente o
   spring-boot-maven-plugin abaixo para gerar o jar executável.
@@ -16,10 +16,10 @@
 		<relativePath>../../pom.xml</relativePath>
 	</parent>
 
-	<groupId>com.acaosocial</groupId>
-	<artifactId>acao-social</artifactId>
+	<groupId>com.voluntariado</groupId>
+	<artifactId>voluntariado</artifactId>
 	<packaging>jar</packaging>
-	<name>acao-social</name>
+	<name>voluntariado</name>
 
 	<dependencies>
 		<dependency>

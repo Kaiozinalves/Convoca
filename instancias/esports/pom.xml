@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Instância 2: noite de esportes com amigos.
+  Instância 2: Noite de e-sports (campeonato online semanal entre amigos, com inscrição e prêmio).
   Esqueleto: depende do framework e vai implementar os hot spots + controllers próprios.
   Quando a classe Application (@SpringBootApplication) existir, descomente o
   spring-boot-maven-plugin abaixo para gerar o jar executável.
@@ -16,10 +16,10 @@
 		<relativePath>../../pom.xml</relativePath>
 	</parent>
 
-	<groupId>com.noiteesportes</groupId>
-	<artifactId>noite-esportes</artifactId>
+	<groupId>com.esports</groupId>
+	<artifactId>esports</artifactId>
 	<packaging>jar</packaging>
-	<name>noite-esportes</name>
+	<name>esports</name>
 
 	<dependencies>
 		<dependency>
