@@ -6,13 +6,13 @@ import com.pelmanager.dto.request.EnderecoRequestDTO;
 import com.pelmanager.dto.request.LoginRequestDTO;
 import com.pelmanager.dto.request.UsuarioRequestDTO;
 import com.pelmanager.dto.request.UsuarioUpdateRequestDTO;
-import com.pelmanager.entity.Endereco;
+import com.convoca.framework.domain.Endereco;
 import com.pelmanager.entity.PreferenciaJogador;
-import com.pelmanager.entity.Usuario;
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.exception.EmailJaCadastradoException;
 import com.pelmanager.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RequisicaoInvalidaException;
-import com.pelmanager.repository.UsuarioRepository;
+import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 

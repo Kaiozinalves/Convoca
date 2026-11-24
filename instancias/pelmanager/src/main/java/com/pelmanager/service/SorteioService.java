@@ -8,7 +8,7 @@ import com.pelmanager.entity.CheckIn;
 import com.pelmanager.entity.PerfilJogador;
 import com.pelmanager.entity.Rodada;
 import com.pelmanager.entity.Time;
-import com.pelmanager.entity.Usuario;
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.Posicao;
 import com.pelmanager.entity.enums.StatusCheckIn;
 import com.pelmanager.exception.OperacaoInvalidaException;

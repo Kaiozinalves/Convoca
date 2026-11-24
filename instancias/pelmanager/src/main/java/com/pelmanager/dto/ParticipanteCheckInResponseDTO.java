@@ -1,6 +1,6 @@
 package com.pelmanager.dto;
 
-import com.pelmanager.entity.enums.Papel;
+import com.convoca.framework.domain.enums.Papel;
 import com.pelmanager.entity.enums.Posicao;
 
 public record ParticipanteCheckInResponseDTO(Long usuarioId,

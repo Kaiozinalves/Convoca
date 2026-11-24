@@ -1,11 +1,13 @@
-package com.pelmanager.entity;
+package com.convoca.framework.domain;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "enderecos")
-@Data
+@Getter
+@Setter
 public class Endereco {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

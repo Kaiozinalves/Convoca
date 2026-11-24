@@ -7,7 +7,7 @@ import com.pelmanager.dto.RankingTemporadaResponseDTO;
 import com.pelmanager.entity.CheckIn;
 import com.pelmanager.entity.Gol;
 import com.pelmanager.entity.Rodada;
-import com.pelmanager.entity.Usuario;
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.VotoRodada;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.pelmanager.entity.enums.StatusCheckIn;
@@ -17,9 +17,9 @@ import com.pelmanager.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
-import com.pelmanager.repository.GrupoPeladaRepository;
+import com.convoca.framework.repository.GrupoRepository;
 import com.pelmanager.repository.RodadaRepository;
-import com.pelmanager.repository.UsuarioRepository;
+import com.convoca.framework.repository.UsuarioRepository;
 import com.pelmanager.repository.VotoRodadaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,14 +39,14 @@ public class EstatisticasService {
 
     private final GolRepository golRepository;
     private final RodadaRepository rodadaRepository;
-    private final GrupoPeladaRepository grupoRepository;
+    private final GrupoRepository grupoRepository;
     private final VotoRodadaRepository votoRepository;
     private final CheckInRepository checkInRepository;
     private final UsuarioRepository usuarioRepository;
 
     public EstatisticasService(GolRepository golRepository,
                                RodadaRepository rodadaRepository,
-                               GrupoPeladaRepository grupoRepository,
+                               GrupoRepository grupoRepository,
                                VotoRodadaRepository votoRepository,
                                CheckInRepository checkInRepository,
                                UsuarioRepository usuarioRepository) {

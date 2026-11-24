@@ -1,14 +1,14 @@
 package com.pelmanager.service;
 
 import com.pelmanager.entity.ConfiguracaoPelada;
-import com.pelmanager.entity.GrupoPelada;
-import com.pelmanager.entity.Participante;
+import com.convoca.framework.domain.Grupo;
+import com.convoca.framework.domain.Participante;
 import com.pelmanager.entity.PerfilJogador;
 import com.pelmanager.entity.PreferenciaJogador;
-import com.pelmanager.entity.Usuario;
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.PernaDominante;
 import com.pelmanager.entity.enums.Posicao;
-import com.pelmanager.repository.ParticipanteRepository;
+import com.convoca.framework.repository.ParticipanteRepository;
 import com.pelmanager.repository.PreferenciaJogadorRepository;
 import jakarta.transaction.Transactional;
 import org.hibernate.Hibernate;
@@ -33,7 +33,7 @@ public class PerfilPeladaService {
         this.preferenciaRepository = preferenciaRepository;
     }
 
-    public ConfiguracaoPelada configuracaoDe(GrupoPelada grupo) {
+    public ConfiguracaoPelada configuracaoDe(Grupo grupo) {
         Object perfil = Hibernate.unproxy(grupo.getPerfil());
         if (perfil instanceof ConfiguracaoPelada configuracao) {
             return configuracao;

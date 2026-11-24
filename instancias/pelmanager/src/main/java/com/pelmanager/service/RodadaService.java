@@ -6,8 +6,8 @@ import com.pelmanager.dto.RodadaStatusResponseDTO;
 import com.pelmanager.dto.request.EnderecoRequestDTO;
 import com.pelmanager.dto.request.RodadaRequestDTO;
 import com.pelmanager.entity.ConfiguracaoPelada;
-import com.pelmanager.entity.Endereco;
-import com.pelmanager.entity.GrupoPelada;
+import com.convoca.framework.domain.Endereco;
+import com.convoca.framework.domain.Grupo;
 import com.pelmanager.entity.Rodada;
 import com.pelmanager.entity.enums.StatusRodada;
 import com.pelmanager.exception.OperacaoInvalidaException;
@@ -15,8 +15,8 @@ import com.pelmanager.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RequisicaoInvalidaException;
 import com.pelmanager.exception.RodadaAtivaExistenteException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
-import com.pelmanager.repository.EnderecoRepository;
-import com.pelmanager.repository.GrupoPeladaRepository;
+import com.convoca.framework.repository.EnderecoRepository;
+import com.convoca.framework.repository.GrupoRepository;
 import com.pelmanager.repository.RodadaRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ import java.util.Objects;
 @Service
 public class RodadaService {
     private final RodadaRepository rodadaRepository;
-    private final GrupoPeladaRepository grupoPeladaRepository;
+    private final GrupoRepository grupoPeladaRepository;
     private final EnderecoRepository enderecoRepository;
     private final EnderecoService enderecoService;
     private final PermissaoService permissaoService;
@@ -36,7 +36,7 @@ public class RodadaService {
     private final PerfilPeladaService perfilPeladaService;
 
     public RodadaService(RodadaRepository rodadaRepository,
-                         GrupoPeladaRepository grupoPeladaRepository,
+                         GrupoRepository grupoPeladaRepository,
                          EnderecoRepository enderecoRepository,
                          EnderecoService enderecoService,
                          PermissaoService permissaoService,
@@ -53,7 +53,7 @@ public class RodadaService {
 
     @Transactional
     public RodadaResponseDTO agendarRodada(RodadaRequestDTO dto) {
-        GrupoPelada grupo = grupoPeladaRepository.findById(dto.grupoId())
+        Grupo grupo = grupoPeladaRepository.findById(dto.grupoId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Grupo não encontrado."));
 
         permissaoService.exigirAdmin(dto.usuarioId(), grupo);

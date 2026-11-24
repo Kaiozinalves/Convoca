@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.StatusCheckIn;
 import jakarta.persistence.*;
 import lombok.Data;

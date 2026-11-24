@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Usuario;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

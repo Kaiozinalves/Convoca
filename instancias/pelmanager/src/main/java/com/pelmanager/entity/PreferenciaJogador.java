@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.PernaDominante;
 import com.pelmanager.entity.enums.Posicao;
 import jakarta.persistence.Column;

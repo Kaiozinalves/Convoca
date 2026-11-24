@@ -1,5 +1,7 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Endereco;
+import com.convoca.framework.domain.Grupo;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.pelmanager.entity.enums.StatusRodada;
 import jakarta.persistence.*;
@@ -24,7 +26,7 @@ public class Rodada {
     //Um grupo possui várias rodadas, mas uma rodada pertence a apenas um grupo
     @ManyToOne
     @JoinColumn(name = "grupo_id", nullable = false)
-    private GrupoPelada grupo;
+    private Grupo grupo;
 
     private BigDecimal valorPorParticipante;
 

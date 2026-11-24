@@ -2,8 +2,8 @@ package com.pelmanager.service;
 
 import com.pelmanager.dto.ConfiguracaoPagamentoDTO;
 import com.pelmanager.entity.ConfiguracaoPelada;
-import com.pelmanager.entity.GrupoPelada;
-import com.pelmanager.repository.GrupoPeladaRepository;
+import com.convoca.framework.domain.Grupo;
+import com.convoca.framework.repository.GrupoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -11,11 +11,11 @@ import java.math.BigDecimal;
 
 @Service
 public class ConfiguracaoPagamentoService {
-    private final GrupoPeladaRepository grupoPeladaRepository;
+    private final GrupoRepository grupoPeladaRepository;
     private final PermissaoService permissaoService;
     private final PerfilPeladaService perfilPeladaService;
 
-    public ConfiguracaoPagamentoService(GrupoPeladaRepository grupoPeladaRepository,
+    public ConfiguracaoPagamentoService(GrupoRepository grupoPeladaRepository,
                                         PermissaoService permissaoService,
                                         PerfilPeladaService perfilPeladaService) {
         this.grupoPeladaRepository = grupoPeladaRepository;
@@ -67,7 +67,7 @@ public class ConfiguracaoPagamentoService {
 
     @Transactional
     public ConfiguracaoPagamentoDTO obterConfiguracao(Long grupoId) {
-        GrupoPelada grupo = grupoPeladaRepository.findById(grupoId)
+        Grupo grupo = grupoPeladaRepository.findById(grupoId)
                 .orElseThrow(() -> new IllegalArgumentException("Grupo não encontrado"));
         ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(grupo);
 

@@ -1,13 +1,13 @@
-package com.pelmanager.entity;
+package com.convoca.framework.domain;
 
 import jakarta.persistence.*;
-import lombok.Data;
-
-import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "usuarios")
-@Data
+@Getter
+@Setter
 public class Usuario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,13 +27,4 @@ public class Usuario {
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "endereco_id", unique = true)
     private Endereco endereco;
-
-    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
-    private List<Participante> gruposQueParticipa;
-
-    @OneToMany(mappedBy = "avaliador", cascade = CascadeType.ALL)
-    private List<Avaliacao> avaliacoesFeitas;
-
-    @OneToMany(mappedBy = "avaliado", cascade = CascadeType.ALL)
-    private List<Avaliacao> avaliacoesRecebidas;
 }

@@ -1,15 +1,15 @@
 package com.pelmanager.service;
 
-import com.pelmanager.entity.GrupoPelada;
-import com.pelmanager.entity.Participante;
-import com.pelmanager.entity.Usuario;
+import com.convoca.framework.domain.Grupo;
+import com.convoca.framework.domain.Participante;
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.StatusCheckIn;
 import com.pelmanager.exception.AcessoNegadoException;
 import com.pelmanager.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RequisicaoInvalidaException;
 import com.pelmanager.repository.CheckInRepository;
-import com.pelmanager.repository.ParticipanteRepository;
-import com.pelmanager.repository.UsuarioRepository;
+import com.convoca.framework.repository.ParticipanteRepository;
+import com.convoca.framework.repository.UsuarioRepository;
 import org.springframework.stereotype.Component;
 
 
@@ -36,7 +36,7 @@ public class PermissaoService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
     }
 
-    public Participante exigirParticipante(Long usuarioId, GrupoPelada grupo) {
+    public Participante exigirParticipante(Long usuarioId, Grupo grupo) {
         if (usuarioId == null) {
             throw new RequisicaoInvalidaException("Informe o usuário que está realizando a ação.");
         }
@@ -44,7 +44,7 @@ public class PermissaoService {
                 .orElseThrow(() -> new AcessoNegadoException("Você não faz parte desta pelada."));
     }
 
-    public Participante exigirAdmin(Long usuarioId, GrupoPelada grupo) {
+    public Participante exigirAdmin(Long usuarioId, Grupo grupo) {
         Participante participante = exigirParticipante(usuarioId, grupo);
         if (!participante.isAdmin()) {
             throw new AcessoNegadoException("Apenas administradores da pelada podem realizar esta ação.");

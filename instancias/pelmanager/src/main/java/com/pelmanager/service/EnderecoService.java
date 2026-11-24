@@ -1,8 +1,8 @@
 package com.pelmanager.service;
 
 import com.pelmanager.dto.request.EnderecoRequestDTO;
-import com.pelmanager.entity.Endereco;
-import com.pelmanager.repository.EnderecoRepository;
+import com.convoca.framework.domain.Endereco;
+import com.convoca.framework.repository.EnderecoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 

@@ -4,7 +4,7 @@ import com.pelmanager.dto.AvaliacaoResponseDTO;
 import com.pelmanager.dto.request.AvaliacaoRequestDTO;
 import com.pelmanager.entity.Avaliacao;
 import com.pelmanager.entity.Rodada;
-import com.pelmanager.entity.Usuario;
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.StatusRodada;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.pelmanager.exception.RecursoNaoEncontradoException;
@@ -12,7 +12,7 @@ import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.exception.RequisicaoInvalidaException;
 import com.pelmanager.repository.AvaliacaoRepository;
 import com.pelmanager.repository.RodadaRepository;
-import com.pelmanager.repository.UsuarioRepository;
+import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 

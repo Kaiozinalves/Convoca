@@ -1,12 +1,12 @@
 package com.pelmanager.service;
 
 import com.pelmanager.dto.PeladaProximaResponseDTO;
-import com.pelmanager.entity.Endereco;
+import com.convoca.framework.domain.Endereco;
 import com.pelmanager.entity.Rodada;
 import com.pelmanager.entity.enums.StatusCheckIn;
 import com.pelmanager.entity.enums.StatusRodada;
 import com.pelmanager.exception.RequisicaoInvalidaException;
-import com.pelmanager.repository.ParticipanteRepository;
+import com.convoca.framework.repository.ParticipanteRepository;
 import com.pelmanager.repository.RodadaBuscaRepository;
 import org.springframework.stereotype.Service;
 

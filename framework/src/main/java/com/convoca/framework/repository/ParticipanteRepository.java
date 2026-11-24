@@ -1,6 +1,6 @@
-package com.pelmanager.repository;
+package com.convoca.framework.repository;
 
-import com.pelmanager.entity.Participante;
+import com.convoca.framework.domain.Participante;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

@@ -2,19 +2,19 @@ package com.pelmanager.service;
 
 import com.pelmanager.dto.FreeAgentResponseDTO;
 import com.pelmanager.dto.request.FreeAgentRequestDTO;
-import com.pelmanager.entity.Endereco;
+import com.convoca.framework.domain.Endereco;
 import com.pelmanager.entity.FreeAgent;
-import com.pelmanager.entity.GrupoPelada;
+import com.convoca.framework.domain.Grupo;
 import com.pelmanager.entity.PreferenciaJogador;
-import com.pelmanager.entity.Usuario;
+import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.Posicao;
 import com.pelmanager.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RequisicaoInvalidaException;
 import com.pelmanager.repository.AvaliacaoRepository;
 import com.pelmanager.repository.FreeAgentRepository;
-import com.pelmanager.repository.GrupoPeladaRepository;
-import com.pelmanager.repository.ParticipanteRepository;
-import com.pelmanager.repository.UsuarioRepository;
+import com.convoca.framework.repository.GrupoRepository;
+import com.convoca.framework.repository.ParticipanteRepository;
+import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -30,14 +30,14 @@ public class FreeAgentService {
 
     private final FreeAgentRepository freeAgentRepository;
     private final UsuarioRepository usuarioRepository;
-    private final GrupoPeladaRepository grupoRepository;
+    private final GrupoRepository grupoRepository;
     private final ParticipanteRepository participanteRepository;
     private final AvaliacaoRepository avaliacaoRepository;
     private final PerfilPeladaService perfilPeladaService;
 
     public FreeAgentService(FreeAgentRepository freeAgentRepository,
                             UsuarioRepository usuarioRepository,
-                            GrupoPeladaRepository grupoRepository,
+                            GrupoRepository grupoRepository,
                             ParticipanteRepository participanteRepository,
                             AvaliacaoRepository avaliacaoRepository,
                             PerfilPeladaService perfilPeladaService) {
@@ -97,7 +97,7 @@ public class FreeAgentService {
         String estadoBusca = vazioParaNulo(estado);
 
         if (grupoId != null) {
-            GrupoPelada grupo = grupoRepository.findById(grupoId)
+            Grupo grupo = grupoRepository.findById(grupoId)
                     .orElseThrow(() -> new RecursoNaoEncontradoException("Pelada não encontrada."));
             Endereco enderecoGrupo = grupo.getEndereco();
             if (cidadeBusca == null && enderecoGrupo != null) {

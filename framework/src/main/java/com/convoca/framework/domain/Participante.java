@@ -1,15 +1,16 @@
-package com.pelmanager.entity;
+package com.convoca.framework.domain;
 
-import com.convoca.framework.domain.PerfilAtividade;
-import com.pelmanager.entity.enums.Papel;
+import com.convoca.framework.domain.enums.Papel;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "participantes")
-@Data
+@Getter
+@Setter
 public class Participante {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +22,7 @@ public class Participante {
 
     @ManyToOne
     @JoinColumn(name = "grupo_id", nullable = false)
-    private GrupoPelada grupo;
+    private Grupo grupo;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "papel", nullable = false)

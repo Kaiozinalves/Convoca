@@ -1,16 +1,17 @@
-package com.pelmanager.entity;
+package com.convoca.framework.domain;
 
-import com.convoca.framework.domain.PerfilGrupo;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "grupo_peladas")
-@Data
-public class GrupoPelada {
+@Table(name = "grupos")
+@Getter
+@Setter
+public class Grupo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -31,7 +32,7 @@ public class GrupoPelada {
 
     private Boolean publica = true;
 
-    // Mesmo encaixe de Participante.perfil: o grupo tem 0..1 PerfilGrupo (no PelManager, ConfiguracaoPelada).
+    // Mesmo encaixe de Participante.perfil: o grupo tem 0..1 PerfilGrupo (cada instância declara a sua subclasse).
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "perfil_id")
     private PerfilGrupo perfil;

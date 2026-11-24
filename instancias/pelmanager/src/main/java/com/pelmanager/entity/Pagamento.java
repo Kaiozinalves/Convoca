@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Usuario;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pelmanager.entity.enums.StatusPagamento;
 import jakarta.persistence.*;
