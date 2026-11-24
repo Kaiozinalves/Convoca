@@ -1,4 +1,4 @@
-package com.pelmanager.exception;
+package com.convoca.framework.exception;
 
 public class RecursoNaoEncontradoException extends RuntimeException {
 

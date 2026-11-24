@@ -60,9 +60,9 @@ public class PerfilPeladaService {
     }
 
     /** Perfil para quem está entrando num grupo, copiado da preferência do usuário. */
-    public PerfilJogador novoPerfilPara(Usuario usuario) {
+    public PerfilJogador novoPerfilPara(Long usuarioId) {
         PerfilJogador perfil = new PerfilJogador();
-        copiar(preferenciaDe(usuario.getId()), perfil);
+        copiar(preferenciaDe(usuarioId), perfil);
         return perfil;
     }
 

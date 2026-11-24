@@ -3,53 +3,37 @@ package com.pelmanager.service;
 import com.convoca.framework.domain.Grupo;
 import com.convoca.framework.domain.Participante;
 import com.convoca.framework.domain.Usuario;
+import com.convoca.framework.service.ServicoGrupo;
 import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.exception.AcessoNegadoException;
-import com.pelmanager.exception.RecursoNaoEncontradoException;
-import com.pelmanager.exception.RequisicaoInvalidaException;
 import com.pelmanager.repository.CheckInRepository;
-import com.convoca.framework.repository.ParticipanteRepository;
-import com.convoca.framework.repository.UsuarioRepository;
 import org.springframework.stereotype.Component;
 
-
+/**
+ * Temporário: as regras de papel (admin/membro) agora são do framework ({@link ServicoGrupo}).
+ * Esta classe só repassa as chamadas, para os services do PelManager não mudarem neste passo.
+ * Some no passo 3, quando o check-in for para o framework e temCheckInConfirmado for junto.
+ */
 @Component
 public class PermissaoService {
 
-    private final ParticipanteRepository participanteRepository;
+    private final ServicoGrupo servicoGrupo;
     private final CheckInRepository checkInRepository;
-    private final UsuarioRepository usuarioRepository;
 
-    public PermissaoService(ParticipanteRepository participanteRepository,
-                            CheckInRepository checkInRepository,
-                            UsuarioRepository usuarioRepository) {
-        this.participanteRepository = participanteRepository;
+    public PermissaoService(ServicoGrupo servicoGrupo, CheckInRepository checkInRepository) {
+        this.servicoGrupo = servicoGrupo;
         this.checkInRepository = checkInRepository;
-        this.usuarioRepository = usuarioRepository;
     }
 
     public Usuario buscarUsuario(Long usuarioId) {
-        if (usuarioId == null) {
-            throw new RequisicaoInvalidaException("Informe o usuário que está realizando a ação.");
-        }
-        return usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
+        return servicoGrupo.buscarUsuario(usuarioId);
     }
 
     public Participante exigirParticipante(Long usuarioId, Grupo grupo) {
-        if (usuarioId == null) {
-            throw new RequisicaoInvalidaException("Informe o usuário que está realizando a ação.");
-        }
-        return participanteRepository.findByUsuarioIdAndGrupoId(usuarioId, grupo.getId())
-                .orElseThrow(() -> new AcessoNegadoException("Você não faz parte desta pelada."));
+        return servicoGrupo.exigirParticipante(usuarioId, grupo);
     }
 
     public Participante exigirAdmin(Long usuarioId, Grupo grupo) {
-        Participante participante = exigirParticipante(usuarioId, grupo);
-        if (!participante.isAdmin()) {
-            throw new AcessoNegadoException("Apenas administradores da pelada podem realizar esta ação.");
-        }
-        return participante;
+        return servicoGrupo.exigirAdmin(usuarioId, grupo);
     }
 
     public boolean temCheckInConfirmado(Long rodadaId, Long usuarioId) {

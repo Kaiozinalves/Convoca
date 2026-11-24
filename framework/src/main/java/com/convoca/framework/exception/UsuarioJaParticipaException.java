@@ -1,4 +1,4 @@
-package com.pelmanager.exception;
+package com.convoca.framework.exception;
 
 public class UsuarioJaParticipaException extends RuntimeException {
     public UsuarioJaParticipaException(String message) {
@@ -7,6 +7,6 @@ public class UsuarioJaParticipaException extends RuntimeException {
     }
 
     public UsuarioJaParticipaException() {
-        super("Você já participa dessa pelada.");
+        super("Você já participa deste grupo.");
     }
 }

@@ -1,5 +1,10 @@
 package com.pelmanager.exception;
 
+import com.convoca.framework.exception.AcessoNegadoException;
+import com.convoca.framework.exception.CodigoConviteInvalidoException;
+import com.convoca.framework.exception.RecursoNaoEncontradoException;
+import com.convoca.framework.exception.RequisicaoInvalidaException;
+import com.convoca.framework.exception.UsuarioJaParticipaException;
 import com.pelmanager.dto.ErroResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

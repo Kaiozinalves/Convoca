@@ -7,24 +7,16 @@ import com.pelmanager.dto.request.GrupoPeladaRequestDTO;
 import com.pelmanager.entity.ConfiguracaoPelada;
 import com.convoca.framework.domain.Endereco;
 import com.convoca.framework.domain.Grupo;
-import com.convoca.framework.domain.Participante;
-import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.CategoriaVoto;
-import com.convoca.framework.domain.enums.Papel;
-import com.pelmanager.exception.CodigoConviteInvalidoException;
-import com.pelmanager.exception.RecursoNaoEncontradoException;
-import com.pelmanager.exception.RequisicaoInvalidaException;
-import com.pelmanager.exception.UsuarioJaParticipaException;
+import com.convoca.framework.exception.RecursoNaoEncontradoException;
+import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.repository.GrupoRepository;
-import com.convoca.framework.repository.ParticipanteRepository;
+import com.convoca.framework.service.ServicoGrupo;
 import com.pelmanager.repository.RodadaRepository;
-import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class GrupoPeladaService {
@@ -32,33 +24,25 @@ public class GrupoPeladaService {
     private static final int PRAZO_MAXIMO_HORAS = 168; // 7 dias
 
     private final GrupoRepository grupoRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final ParticipanteRepository participanteRepository;
     private final RodadaRepository rodadaRepository;
     private final PermissaoService permissaoService;
     private final PerfilPeladaService perfilPeladaService;
+    private final ServicoGrupo servicoGrupo;
 
     public GrupoPeladaService(GrupoRepository grupoRepository,
-                              UsuarioRepository usuarioRepository,
-                              ParticipanteRepository participanteRepository,
                               RodadaRepository rodadaRepository,
                               PermissaoService permissaoService,
-                              PerfilPeladaService perfilPeladaService) {
+                              PerfilPeladaService perfilPeladaService,
+                              ServicoGrupo servicoGrupo) {
         this.grupoRepository = grupoRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.participanteRepository = participanteRepository;
         this.rodadaRepository = rodadaRepository;
         this.permissaoService = permissaoService;
         this.perfilPeladaService = perfilPeladaService;
+        this.servicoGrupo = servicoGrupo;
     }
 
     @Transactional
     public GrupoPeladaResponseDTO criar(GrupoPeladaRequestDTO dto) {
-
-        // Impede que a pelada seja criada sem um dono válido
-        Usuario dono = usuarioRepository.findById(dto.fundadorId())
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário criador não encontrado."));
-
         Endereco endereco = new Endereco();
         endereco.setLogradouro(dto.endereco().logradouro());
         endereco.setNumero(dto.endereco().numero());
@@ -69,23 +53,13 @@ public class GrupoPeladaService {
 
         Grupo grupo = new Grupo();
         grupo.setNome(dto.nome());
-        grupo.setCodigoConvite(UUID.randomUUID().toString().substring(0, 6).toUpperCase());
-        grupo.setDataCriacao(LocalDateTime.now());
         grupo.setEndereco(endereco);
         grupo.setPublica(dto.publica() == null || dto.publica());
         grupo.setPerfil(new ConfiguracaoPelada());
 
-        Grupo grupoSalvo = grupoRepository.save(grupo);
-
-        // Gera o vinculo automaticamente
-        Participante admin = new Participante();
-        admin.setUsuario(dono);
-        admin.setGrupo(grupoSalvo);
-        admin.setPapel(Papel.ADMIN);
-        admin.setDataEntrada(LocalDateTime.now());
-        admin.setPerfil(perfilPeladaService.novoPerfilPara(dono));
-
-        participanteRepository.save(admin);
+        // O framework gera o código de convite e a data, e torna o fundador ADMIN.
+        Grupo grupoSalvo = servicoGrupo.criarGrupo(grupo, dto.fundadorId(),
+                perfilPeladaService.novoPerfilPara(dto.fundadorId()));
 
         return new GrupoPeladaResponseDTO(
                 grupoSalvo.getId(),
@@ -99,26 +73,8 @@ public class GrupoPeladaService {
 
     @Transactional
     public void entrarNoGrupo(EntrarGrupoPeladaRequestDTO dto) {
-
-        Usuario jogador = usuarioRepository.findById(dto.IdUsuario())
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
-
-        Grupo grupo = grupoRepository.findByCodigoConvite(dto.codigoConvite())
-                .orElseThrow(CodigoConviteInvalidoException::new);
-
-
-        if (participanteRepository.existsByUsuarioIdAndGrupoId(jogador.getId(), grupo.getId())) {
-            throw new UsuarioJaParticipaException();
-        }
-
-        Participante novoParticipante = new Participante();
-        novoParticipante.setUsuario(jogador);
-        novoParticipante.setGrupo(grupo);
-        novoParticipante.setPapel(Papel.MEMBRO);
-        novoParticipante.setDataEntrada(LocalDateTime.now());
-        novoParticipante.setPerfil(perfilPeladaService.novoPerfilPara(jogador));
-
-        participanteRepository.save(novoParticipante);
+        servicoGrupo.EntrarNoGrupo(dto.IdUsuario(), dto.codigoConvite(),
+                perfilPeladaService.novoPerfilPara(dto.IdUsuario()));
     }
 
     public List<GrupoPeladaResponseDTO> listarPeladasDoUsuario(Long usuarioId) {

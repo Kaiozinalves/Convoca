@@ -13,7 +13,7 @@ import com.pelmanager.entity.enums.CategoriaVoto;
 import com.pelmanager.entity.enums.StatusCheckIn;
 import com.pelmanager.entity.enums.StatusRodada;
 import com.pelmanager.exception.OperacaoInvalidaException;
-import com.pelmanager.exception.RecursoNaoEncontradoException;
+import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
