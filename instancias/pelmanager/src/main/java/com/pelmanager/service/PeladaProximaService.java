@@ -2,9 +2,9 @@ package com.pelmanager.service;
 
 import com.pelmanager.dto.PeladaProximaResponseDTO;
 import com.convoca.framework.domain.Endereco;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.repository.ParticipanteRepository;
 import com.pelmanager.repository.RodadaBuscaRepository;
@@ -42,11 +42,11 @@ public class PeladaProximaService {
         boolean filtraBairro = bairro != null && !bairro.isBlank();
         LocalDateTime agora = LocalDateTime.now();
 
-        List<Rodada> candidatas = rodadaBuscaRepository
-                .buscarNaCidade(StatusRodada.AGENDADA, agora.toLocalDate(), cidade.trim())
+        List<Evento> candidatas = rodadaBuscaRepository
+                .buscarNaCidade(StatusEvento.AGENDADO, agora.toLocalDate(), cidade.trim())
                 .stream()
                 // a query traz o dia de hoje inteiro; aqui tira o que já passou do horário
-                .filter(r -> !LocalDateTime.of(r.getDataRodada(), r.getHoraRodada()).isBefore(agora))
+                .filter(r -> !LocalDateTime.of(r.getData(), r.getHora()).isBefore(agora))
                 .filter(r -> estado == null || estado.isBlank()
                         || iguais(estado, r.getEnderecoResolvido().getEstado()))
                 // quem já está no grupo não precisa "descobrir" a própria pelada
@@ -54,10 +54,10 @@ public class PeladaProximaService {
                         || !Boolean.TRUE.equals(
                         participanteRepository.existsByUsuarioIdAndGrupoId(usuarioId, r.getGrupo().getId())))
                 .sorted(Comparator
-                        .comparingInt((Rodada r) ->
+                        .comparingInt((Evento r) ->
                                 filtraBairro && iguais(bairro, r.getEnderecoResolvido().getBairro()) ? 0 : 1)
-                        .thenComparing(Rodada::getDataRodada)
-                        .thenComparing(Rodada::getHoraRodada))
+                        .thenComparing(Evento::getData)
+                        .thenComparing(Evento::getHora))
                 .limit(limiteFinal)
                 .toList();
 
@@ -65,7 +65,7 @@ public class PeladaProximaService {
             return List.of();
         }
 
-        List<Long> rodadaIds = candidatas.stream().map(Rodada::getId).toList();
+        List<Long> rodadaIds = candidatas.stream().map(Evento::getId).toList();
         List<Long> grupoIds = candidatas.stream().map(r -> r.getGrupo().getId()).distinct().toList();
 
         Map<Long, Long> confirmadosPorRodada =
@@ -80,8 +80,8 @@ public class PeladaProximaService {
                     r.getGrupo().getNome(),
                     r.getGrupo().getCodigoConvite(),
                     r.getId(),
-                    r.getDataRodada(),
-                    r.getHoraRodada(),
+                    r.getData(),
+                    r.getHora(),
                     formatarEndereco(endereco),
                     endereco.getBairro(),
                     endereco.getCidade(),

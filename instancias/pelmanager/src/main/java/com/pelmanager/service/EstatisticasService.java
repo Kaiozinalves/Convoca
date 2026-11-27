@@ -6,19 +6,19 @@ import com.pelmanager.dto.LinhaEstatisticaDTO;
 import com.pelmanager.dto.RankingTemporadaResponseDTO;
 import com.pelmanager.entity.CheckIn;
 import com.pelmanager.entity.Gol;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.VotoRodada;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.enums.StatusEvento;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
 import com.convoca.framework.repository.GrupoRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import com.pelmanager.repository.VotoRodadaRepository;
 import org.springframework.stereotype.Service;
@@ -38,14 +38,14 @@ import java.util.stream.Collectors;
 public class EstatisticasService {
 
     private final GolRepository golRepository;
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final GrupoRepository grupoRepository;
     private final VotoRodadaRepository votoRepository;
     private final CheckInRepository checkInRepository;
     private final UsuarioRepository usuarioRepository;
 
     public EstatisticasService(GolRepository golRepository,
-                               RodadaRepository rodadaRepository,
+                               EventoRepository rodadaRepository,
                                GrupoRepository grupoRepository,
                                VotoRodadaRepository votoRepository,
                                CheckInRepository checkInRepository,
@@ -77,23 +77,23 @@ public class EstatisticasService {
             throw new RecursoNaoEncontradoException("Pelada não encontrada.");
         }
 
-        Rodada rodadaAtual = rodadaRepository.findById(rodadaId)
+        Evento rodadaAtual = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
         if (!rodadaAtual.getGrupo().getId().equals(grupoId)) {
             throw new RecursoNaoEncontradoException("A rodada não pertence a esta pelada.");
         }
-        if (rodadaAtual.getStatusRodada() != StatusRodada.FINALIZADA) {
+        if (rodadaAtual.getStatus() != StatusEvento.FINALIZADO) {
             throw new OperacaoInvalidaException("O ranking da temporada fica disponível depois que a rodada termina.");
         }
 
-        int ano = rodadaAtual.getDataRodada().getYear();
-        List<Rodada> temporada = rodadaRepository.findByGrupoIdOrderByIdDesc(grupoId).stream()
-                .filter(r -> r.getStatusRodada() == StatusRodada.FINALIZADA)
-                .filter(r -> r.getDataRodada() != null && r.getDataRodada().getYear() == ano)
+        int ano = rodadaAtual.getData().getYear();
+        List<Evento> temporada = rodadaRepository.findByGrupoIdOrderByIdDesc(grupoId).stream()
+                .filter(r -> r.getStatus() == StatusEvento.FINALIZADO)
+                .filter(r -> r.getData() != null && r.getData().getYear() == ano)
                 .filter(r -> antesOuIgual(r, rodadaAtual))
-                .sorted(Comparator.comparing(Rodada::getDataRodada).thenComparing(Rodada::getId))
+                .sorted(Comparator.comparing(Evento::getData).thenComparing(Evento::getId))
                 .toList();
-        List<Rodada> anteriores = temporada.stream()
+        List<Evento> anteriores = temporada.stream()
                 .filter(r -> antesOuIgual(r, rodadaAtual) && !r.getId().equals(rodadaAtual.getId()))
                 .toList();
 
@@ -118,12 +118,12 @@ public class EstatisticasService {
         );
     }
 
-    private boolean antesOuIgual(Rodada a, Rodada b) {
-        int comparacaoData = a.getDataRodada().compareTo(b.getDataRodada());
+    private boolean antesOuIgual(Evento a, Evento b) {
+        int comparacaoData = a.getData().compareTo(b.getData());
         return comparacaoData < 0 || (comparacaoData == 0 && a.getId() <= b.getId());
     }
 
-    private Map<Long, Integer> contarGols(List<Rodada> rodadas,
+    private Map<Long, Integer> contarGols(List<Evento> rodadas,
                                           Map<Long, List<Gol>> golsPorRodada,
                                           Function<Gol, Usuario> extrator) {
         return rodadas.stream()
@@ -133,16 +133,16 @@ public class EstatisticasService {
                 .collect(Collectors.toMap(Usuario::getId, usuario -> 1, Integer::sum));
     }
 
-    private Map<Long, Integer> contarVotosMelhorJogador(List<Rodada> rodadas) {
+    private Map<Long, Integer> contarVotosMelhorJogador(List<Evento> rodadas) {
         if (rodadas.isEmpty()) return Map.of();
-        List<Long> idsRodadas = rodadas.stream().map(Rodada::getId).toList();
+        List<Long> idsRodadas = rodadas.stream().map(Evento::getId).toList();
         Map<Long, List<VotoRodada>> porRodada = votoRepository
                 .findByRodadaIdInAndCategoria(idsRodadas, CategoriaVoto.MELHOR_JOGADOR).stream()
                 .collect(Collectors.groupingBy(v -> v.getRodada().getId()));
 
         Map<Long, Integer> votos = new HashMap<>();
-        for (Rodada rodada : rodadas) {
-            if (!rodada.getCategoriasVotacao().contains(CategoriaVoto.MELHOR_JOGADOR)) continue;
+        for (Evento rodada : rodadas) {
+            if (!rodada.getCategoriasVotacao().contains(CategoriaVoto.MELHOR_JOGADOR.comoCategoria())) continue;
 
             List<VotoRodada> votosDaRodada = porRodada.getOrDefault(rodada.getId(), List.of());
             int totalEleitores = checkInRepository

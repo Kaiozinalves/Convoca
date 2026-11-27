@@ -3,18 +3,18 @@ package com.pelmanager.service;
 import com.pelmanager.dto.*;
 import com.pelmanager.dto.request.VotoRequestDTO;
 import com.pelmanager.entity.CheckIn;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.VotoRodada;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.CheckInRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import com.pelmanager.repository.VotoRodadaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,13 +32,13 @@ public class VotacaoService {
     public static final String ABERTA = "ABERTA";
     public static final String ENCERRADA = "ENCERRADA";
 
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final VotoRodadaRepository votoRepository;
     private final CheckInRepository checkInRepository;
     private final UsuarioRepository usuarioRepository;
     private final PermissaoService permissaoService;
 
-    public VotacaoService(RodadaRepository rodadaRepository,
+    public VotacaoService(EventoRepository rodadaRepository,
                           VotoRodadaRepository votoRepository,
                           CheckInRepository checkInRepository,
                           UsuarioRepository usuarioRepository,
@@ -52,9 +52,9 @@ public class VotacaoService {
 
     @Transactional
     public VotoRegistradoDTO votar(Long rodadaId, VotoRequestDTO dto) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
 
-        if (rodada.getStatusRodada() != StatusRodada.FINALIZADA) {
+        if (rodada.getStatus() != StatusEvento.FINALIZADO) {
             throw new OperacaoInvalidaException("A votação só abre depois que a rodada é finalizada.");
         }
         if (!ABERTA.equals(situacao(rodada))) {
@@ -63,7 +63,7 @@ public class VotacaoService {
         if (dto.categoria() == null) {
             throw new RequisicaoInvalidaException("Informe a categoria do voto.");
         }
-        if (!rodada.getCategoriasVotacao().contains(dto.categoria())) {
+        if (!rodada.getCategoriasVotacao().contains(dto.categoria().comoCategoria())) {
             throw new OperacaoInvalidaException("Esta categoria não está ativa para esta rodada.");
         }
         if (dto.votanteId() == null || dto.votadoId() == null) {
@@ -106,11 +106,11 @@ public class VotacaoService {
 
     @Transactional(readOnly = true)
     public VotacaoResponseDTO consultar(Long rodadaId, Long usuarioId) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirParticipante(usuarioId, rodada.getGrupo());
 
         String situacao = situacao(rodada);
-        if (rodada.getStatusRodada() != StatusRodada.FINALIZADA) {
+        if (rodada.getStatus() != StatusEvento.FINALIZADO) {
             return new VotacaoResponseDTO(rodadaId, situacao, null, false, 0, List.of(), List.of());
         }
 
@@ -137,7 +137,7 @@ public class VotacaoService {
 
         List<CategoriaVotacaoDTO> categorias = new ArrayList<>();
         for (CategoriaVoto categoria : CategoriaVoto.values()) {
-            if (!rodada.getCategoriasVotacao().contains(categoria)) {
+            if (!rodada.getCategoriasVotacao().contains(categoria.comoCategoria())) {
                 continue;
             }
             Map<Long, Long> contagem = apuracao.getOrDefault(categoria, Map.of());
@@ -164,8 +164,8 @@ public class VotacaoService {
     }
 
     /** AGUARDANDO_RODADA | ABERTA | ENCERRADA — usado também por RodadaService. */
-    public static String situacao(Rodada rodada) {
-        if (rodada.getStatusRodada() != StatusRodada.FINALIZADA) {
+    public static String situacao(Evento rodada) {
+        if (rodada.getStatus() != StatusEvento.FINALIZADO) {
             return AGUARDANDO_RODADA;
         }
         LocalDateTime prazo = rodada.getVotacaoAte();
@@ -219,7 +219,7 @@ public class VotacaoService {
         return new JogadorResumoDTO(usuario.getId(), usuario.getNome(), usuario.getApelido());
     }
 
-    private Rodada buscarRodada(Long rodadaId) {
+    private Evento buscarRodada(Long rodadaId) {
         return rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
     }

@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pelmanager.entity.enums.StatusPagamento;
@@ -21,7 +22,7 @@ public class Pagamento {
     @ManyToOne
     @JoinColumn(name = "rodada_id", nullable = false)
     @JsonIgnoreProperties({"grupo", "avaliacoes", "enderecoAlternativo", "categoriasVotacao"})
-    private Rodada rodada;
+    private Evento rodada;
 
     // Qual usuário deve pagar
     @ManyToOne

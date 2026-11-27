@@ -3,15 +3,15 @@ package com.pelmanager.service;
 import com.pelmanager.dto.AvaliacaoResponseDTO;
 import com.pelmanager.dto.request.AvaliacaoRequestDTO;
 import com.pelmanager.entity.Avaliacao;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.enums.StatusEvento;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.repository.AvaliacaoRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -22,12 +22,12 @@ import java.util.List;
 @Service
 public class AvaliacaoService {
     private final AvaliacaoRepository avaliacaoRepository;
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final UsuarioRepository usuarioRepository;
     private final PermissaoService permissaoService;
 
     public AvaliacaoService(AvaliacaoRepository avaliacaoRepository,
-                            RodadaRepository rodadaRepository,
+                            EventoRepository rodadaRepository,
                             UsuarioRepository usuarioRepository,
                             PermissaoService permissaoService) {
         this.avaliacaoRepository = avaliacaoRepository;
@@ -39,10 +39,10 @@ public class AvaliacaoService {
     @Transactional
     public AvaliacaoResponseDTO avaliarJogador(AvaliacaoRequestDTO dto){
 
-        Rodada rodada = rodadaRepository.findById(dto.rodadaId())
+        Evento rodada = rodadaRepository.findById(dto.rodadaId())
                 .orElseThrow(() -> new RodadaNaoEncontradaException(dto.rodadaId()));
 
-        if (rodada.getStatusRodada() != StatusRodada.FINALIZADA) {
+        if (rodada.getStatus() != StatusEvento.FINALIZADO) {
             throw new OperacaoInvalidaException("As avaliações só são permitidas após o fim da rodada.");
         }
 

@@ -3,7 +3,7 @@ package com.pelmanager.service;
 import com.pelmanager.entity.CheckIn;
 import com.pelmanager.entity.ConfiguracaoPelada;
 import com.pelmanager.entity.Pagamento;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.pelmanager.entity.enums.StatusCheckIn;
 import com.pelmanager.entity.enums.StatusPagamento;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
@@ -11,7 +11,7 @@ import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.CheckInRepository;
 import com.pelmanager.repository.PagamentoRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -26,14 +26,14 @@ public class PagamentoService {
     private final PagamentoRepository pagamentoRepository;
     private final CheckInRepository checkInRepository;
     private final GerarQrCodeService qrCodeService;
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final PermissaoService permissaoService;
     private final PerfilPeladaService perfilPeladaService;
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
                             CheckInRepository checkInRepository,
                             GerarQrCodeService qrCodeService,
-                            RodadaRepository rodadaRepository,
+                            EventoRepository rodadaRepository,
                             PermissaoService permissaoService,
                             PerfilPeladaService perfilPeladaService) {
         this.pagamentoRepository = pagamentoRepository;
@@ -46,7 +46,7 @@ public class PagamentoService {
 
     @Transactional
     public List<Pagamento> gerarPagamentosComoAdmin(Long rodadaId, Long usuarioAdminId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
         permissaoService.exigirAdmin(usuarioAdminId, rodada.getGrupo());
         return criarPagamentoAoFinalizarCheckIn(rodadaId);
@@ -54,7 +54,7 @@ public class PagamentoService {
 
     @Transactional
     public List<Pagamento> criarPagamentoAoFinalizarCheckIn(Long rodadaId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
         ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(rodada.getGrupo());
@@ -164,7 +164,7 @@ public class PagamentoService {
 
     @Transactional
     public List<Pagamento> registrarDesistencia(Long rodadaId, Long usuarioId, Long usuarioAdminId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
         permissaoService.exigirAdmin(usuarioAdminId, rodada.getGrupo());
         checkInRepository.findByRodadaIdAndUsuarioId(rodadaId, usuarioId).ifPresent(checkIn -> {
@@ -177,7 +177,7 @@ public class PagamentoService {
 
     @Transactional
     public void CalcularPorDesistencia(Long rodadaId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
         List<Pagamento> todos = pagamentoRepository.findByRodadaId(rodadaId);

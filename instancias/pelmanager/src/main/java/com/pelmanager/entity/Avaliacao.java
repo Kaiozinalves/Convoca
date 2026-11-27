@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -16,7 +17,7 @@ public class Avaliacao {
 
     @ManyToOne
     @JoinColumn(name = "rodada_id", nullable = false)
-    private Rodada rodada;
+    private Evento rodada;
 
     @ManyToOne
     @JoinColumn(name = "avaliador_id", nullable = false)

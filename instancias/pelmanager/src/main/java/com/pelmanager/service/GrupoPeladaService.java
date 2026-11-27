@@ -12,7 +12,7 @@ import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.repository.GrupoRepository;
 import com.convoca.framework.service.ServicoGrupo;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -24,13 +24,13 @@ public class GrupoPeladaService {
     private static final int PRAZO_MAXIMO_HORAS = 168; // 7 dias
 
     private final GrupoRepository grupoRepository;
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final PermissaoService permissaoService;
     private final PerfilPeladaService perfilPeladaService;
     private final ServicoGrupo servicoGrupo;
 
     public GrupoPeladaService(GrupoRepository grupoRepository,
-                              RodadaRepository rodadaRepository,
+                              EventoRepository rodadaRepository,
                               PermissaoService permissaoService,
                               PerfilPeladaService perfilPeladaService,
                               ServicoGrupo servicoGrupo) {

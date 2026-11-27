@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import jakarta.persistence.*;
@@ -30,7 +31,7 @@ public class VotoRodada {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "rodada_id", nullable = false)
-    private Rodada rodada;
+    private Evento rodada;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

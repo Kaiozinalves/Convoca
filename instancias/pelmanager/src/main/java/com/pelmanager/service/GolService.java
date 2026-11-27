@@ -6,10 +6,10 @@ import com.pelmanager.dto.request.GolRequestDTO;
 import com.pelmanager.entity.CheckIn;
 import com.pelmanager.entity.Gol;
 import com.convoca.framework.domain.Participante;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
@@ -17,7 +17,7 @@ import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,12 +30,12 @@ public class GolService {
 
     private final GolRepository golRepository;
     private final CheckInRepository checkInRepository;
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final PermissaoService permissaoService;
 
     public GolService(GolRepository golRepository,
                       CheckInRepository checkInRepository,
-                      RodadaRepository rodadaRepository,
+                      EventoRepository rodadaRepository,
                       PermissaoService permissaoService) {
         this.golRepository = golRepository;
         this.checkInRepository = checkInRepository;
@@ -45,7 +45,7 @@ public class GolService {
 
     @Transactional
     public GolResponseDTO registrar(Long rodadaId, GolRequestDTO dto) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         Participante registrador = permissaoService.exigirParticipante(dto.usuarioId(), rodada.getGrupo());
 
         validarStatusParaEventos(rodada, registrador.isAdmin());
@@ -76,7 +76,7 @@ public class GolService {
 
     @Transactional
     public GolResponseDTO corrigir(Long rodadaId, Long golId, GolRequestDTO dto) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirAdmin(dto.usuarioId(), rodada.getGrupo());
         validarStatusParaEventos(rodada, true);
 
@@ -91,19 +91,19 @@ public class GolService {
 
     @Transactional
     public void remover(Long rodadaId, Long golId, Long usuarioId) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
         validarStatusParaEventos(rodada, true);
 
         golRepository.delete(buscarGol(rodadaId, golId));
     }
 
-    private void validarStatusParaEventos(Rodada rodada, boolean admin) {
-        StatusRodada status = rodada.getStatusRodada();
-        if (status == StatusRodada.EM_ANDAMENTO) {
+    private void validarStatusParaEventos(Evento rodada, boolean admin) {
+        StatusEvento status = rodada.getStatus();
+        if (status == StatusEvento.EM_ANDAMENTO) {
             return;
         }
-        if (status == StatusRodada.FINALIZADA) {
+        if (status == StatusEvento.FINALIZADO) {
             if (admin) {
                 return;
             }
@@ -155,7 +155,7 @@ public class GolService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Gol não encontrado nesta rodada."));
     }
 
-    private Rodada buscarRodada(Long rodadaId) {
+    private Evento buscarRodada(Long rodadaId) {
         return rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
     }

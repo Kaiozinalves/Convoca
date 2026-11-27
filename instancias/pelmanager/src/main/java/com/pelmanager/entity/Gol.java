@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,7 +20,7 @@ public class Gol {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "rodada_id", nullable = false)
-    private Rodada rodada;
+    private Evento rodada;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "autor_id", nullable = false)

@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.StatusCheckIn;
 import jakarta.persistence.*;
@@ -17,7 +18,7 @@ public class CheckIn {
 
     @ManyToOne
     @JoinColumn(name = "rodada_id", nullable = false)
-    private Rodada rodada;
+    private Evento rodada;
 
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)

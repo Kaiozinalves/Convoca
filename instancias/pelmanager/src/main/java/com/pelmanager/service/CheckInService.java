@@ -4,10 +4,10 @@ import com.pelmanager.dto.CheckInResponseDTO;
 import com.pelmanager.dto.ParticipanteCheckInResponseDTO;
 import com.pelmanager.dto.request.CheckInRequestDTO;
 import com.pelmanager.entity.CheckIn;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
 import com.pelmanager.exception.CheckInDuplicadoException;
 import com.pelmanager.exception.OperacaoInvalidaException;
@@ -15,7 +15,7 @@ import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.CheckInRepository;
 import com.convoca.framework.repository.ParticipanteRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ import java.util.Optional;
 @Service
 public class CheckInService {
     private final CheckInRepository checkInRepository;
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final UsuarioRepository usuarioRepository;
     private final ParticipanteRepository participanteRepository;
     private final PermissaoService permissaoService;
@@ -35,7 +35,7 @@ public class CheckInService {
     private final PerfilPeladaService perfilPeladaService;
 
     public CheckInService(CheckInRepository checkInRepository,
-                          RodadaRepository rodadaRepository,
+                          EventoRepository rodadaRepository,
                           UsuarioRepository usuarioRepository,
                           ParticipanteRepository participanteRepository,
                           PermissaoService permissaoService,
@@ -52,12 +52,12 @@ public class CheckInService {
 
     @Transactional
     public CheckInResponseDTO realizarCheckIn(CheckInRequestDTO checkInRequestDTO) {
-        Optional<Rodada> rodada = rodadaRepository.findById(checkInRequestDTO.rodadaId());
+        Optional<Evento> rodada = rodadaRepository.findById(checkInRequestDTO.rodadaId());
         if (rodada.isEmpty()) {
             throw new RodadaNaoEncontradaException(checkInRequestDTO.rodadaId());
         }
 
-        Rodada rodada1 = rodada.get();
+        Evento rodada1 = rodada.get();
         if (!rodada1.estaAberta()) {
             throw new OperacaoInvalidaException("Rodada não está aberta para check-in.");
         }
@@ -102,7 +102,7 @@ public class CheckInService {
 
     @Transactional
     public List<ParticipanteCheckInResponseDTO> cancelarCheckIn(Long rodadaId, Long usuarioId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
         checkInRepository.findByRodadaIdAndUsuarioId(rodada.getId(), usuarioId).ifPresent(checkIn -> {
@@ -115,7 +115,7 @@ public class CheckInService {
     }
 
     public List<ParticipanteCheckInResponseDTO> listarStatusDaRodada(Long rodadaId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
         return rodada.getGrupo().getParticipantes().stream()
@@ -138,11 +138,11 @@ public class CheckInService {
 
     @Transactional
     public List<ParticipanteCheckInResponseDTO> confirmarTodos(Long rodadaId, Long usuarioAdminId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
         permissaoService.exigirAdmin(usuarioAdminId, rodada.getGrupo());
 
-        if (rodada.getStatusRodada() != StatusRodada.AGENDADA) {
+        if (rodada.getStatus() != StatusEvento.AGENDADO) {
             throw new OperacaoInvalidaException("Só é possível confirmar todos enquanto a rodada está agendada.");
         }
 

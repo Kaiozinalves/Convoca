@@ -1,5 +1,7 @@
 package com.pelmanager.entity.enums;
 
+import com.convoca.framework.domain.Categoria;
+
 
 public enum CategoriaVoto {
     MELHOR_JOGADOR("Melhor jogador da rodada"),
@@ -15,5 +17,10 @@ public enum CategoriaVoto {
 
     public String getRotulo() {
         return rotulo;
+    }
+
+    /** Tradução para o valor genérico do núcleo (codigo = nome da constante). */
+    public Categoria comoCategoria() {
+        return new Categoria(name(), rotulo);
     }
 }

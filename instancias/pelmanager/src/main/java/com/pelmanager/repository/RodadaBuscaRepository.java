@@ -1,8 +1,8 @@
 package com.pelmanager.repository;
 
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.enums.StatusEvento;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -11,20 +11,20 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
-public interface RodadaBuscaRepository extends Repository<Rodada, Long> {
+public interface RodadaBuscaRepository extends Repository<Evento, Long> {
 
     @Query("""
-            SELECT r FROM Rodada r
+            SELECT r FROM Evento r
             JOIN FETCH r.grupo g
             LEFT JOIN FETCH g.endereco ge
             LEFT JOIN FETCH r.enderecoAlternativo ea
-            WHERE r.statusRodada = :status
-              AND r.dataRodada >= :hoje
+            WHERE r.status = :status
+              AND r.data >= :hoje
               AND (g.publica IS NULL OR g.publica = true)
               AND LOWER(COALESCE(ea.cidade, ge.cidade)) = LOWER(:cidade)
-            ORDER BY r.dataRodada ASC, r.horaRodada ASC
+            ORDER BY r.data ASC, r.hora ASC
             """)
-    List<Rodada> buscarNaCidade(@Param("status") StatusRodada status,
+    List<Evento> buscarNaCidade(@Param("status") StatusEvento status,
                                 @Param("hoje") LocalDate hoje,
                                 @Param("cidade") String cidade);
 

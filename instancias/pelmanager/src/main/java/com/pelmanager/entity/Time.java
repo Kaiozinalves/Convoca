@@ -1,5 +1,6 @@
 package com.pelmanager.entity;
 
+import com.convoca.framework.domain.Evento;
 import jakarta.persistence.Entity;
 import lombok.Data;
 
@@ -16,7 +17,7 @@ public class Time {
 
     @ManyToOne
     @JoinColumn(name = "rodada_id", nullable = false)
-    private Rodada rodada;
+    private Evento rodada;
 
     private String nome;
 

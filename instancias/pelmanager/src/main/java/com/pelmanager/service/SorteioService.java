@@ -6,7 +6,7 @@ import com.pelmanager.dto.SorteioResponseDTO;
 import com.pelmanager.dto.TimeResponseDTO;
 import com.pelmanager.entity.CheckIn;
 import com.pelmanager.entity.PerfilJogador;
-import com.pelmanager.entity.Rodada;
+import com.convoca.framework.domain.Evento;
 import com.pelmanager.entity.Time;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.Posicao;
@@ -15,7 +15,7 @@ import com.pelmanager.exception.OperacaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.AvaliacaoRepository;
 import com.pelmanager.repository.CheckInRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import com.pelmanager.repository.TimeRepository;
 import com.pelmanager.sorteio.BalanceadorDeTimes;
 import jakarta.transaction.Transactional;
@@ -33,13 +33,13 @@ import java.util.stream.Collectors;
 public class SorteioService {
     private final CheckInRepository checkInRepository;
     private final AvaliacaoRepository avaliacaoRepository;
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final TimeRepository timeRepository;
     private final PermissaoService permissaoService;
     private final PerfilPeladaService perfilPeladaService;
 
     public SorteioService(CheckInRepository checkInRepository, AvaliacaoRepository avaliacaoRepository,
-                          RodadaRepository rodadaRepository, TimeRepository timeRepository,
+                          EventoRepository rodadaRepository, TimeRepository timeRepository,
                           PermissaoService permissaoService,
                           PerfilPeladaService perfilPeladaService) {
         this.checkInRepository = checkInRepository;
@@ -52,7 +52,7 @@ public class SorteioService {
 
     @Transactional
     public SorteioResponseDTO sortearTimes(Long rodadaId, Long usuarioId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
@@ -105,7 +105,7 @@ public class SorteioService {
 
     @Transactional
     public SorteioResponseDTO sortearTimesAleatorio(Long rodadaId, Long usuarioId) {
-        Rodada rodada = rodadaRepository.findById(rodadaId)
+        Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());

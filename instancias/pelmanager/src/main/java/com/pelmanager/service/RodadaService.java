@@ -6,10 +6,11 @@ import com.pelmanager.dto.RodadaStatusResponseDTO;
 import com.pelmanager.dto.request.EnderecoRequestDTO;
 import com.pelmanager.dto.request.RodadaRequestDTO;
 import com.pelmanager.entity.ConfiguracaoPelada;
+import com.pelmanager.entity.enums.CategoriaVoto;
 import com.convoca.framework.domain.Endereco;
 import com.convoca.framework.domain.Grupo;
-import com.pelmanager.entity.Rodada;
-import com.pelmanager.entity.enums.StatusRodada;
+import com.convoca.framework.domain.Evento;
+import com.convoca.framework.domain.enums.StatusEvento;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
@@ -17,17 +18,18 @@ import com.pelmanager.exception.RodadaAtivaExistenteException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.convoca.framework.repository.EnderecoRepository;
 import com.convoca.framework.repository.GrupoRepository;
-import com.pelmanager.repository.RodadaRepository;
+import com.convoca.framework.repository.EventoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 import java.util.Objects;
 
 @Service
 public class RodadaService {
-    private final RodadaRepository rodadaRepository;
+    private final EventoRepository rodadaRepository;
     private final GrupoRepository grupoPeladaRepository;
     private final EnderecoRepository enderecoRepository;
     private final EnderecoService enderecoService;
@@ -35,7 +37,7 @@ public class RodadaService {
     private final PagamentoService pagamentoService;
     private final PerfilPeladaService perfilPeladaService;
 
-    public RodadaService(RodadaRepository rodadaRepository,
+    public RodadaService(EventoRepository rodadaRepository,
                          GrupoRepository grupoPeladaRepository,
                          EnderecoRepository enderecoRepository,
                          EnderecoService enderecoService,
@@ -58,15 +60,15 @@ public class RodadaService {
 
         permissaoService.exigirAdmin(dto.usuarioId(), grupo);
 
-        if (rodadaRepository.existsByGrupoIdAndStatusRodada(grupo.getId(), StatusRodada.AGENDADA)) {
+        if (rodadaRepository.existsByGrupoIdAndStatus(grupo.getId(), StatusEvento.AGENDADO)) {
             throw new RodadaAtivaExistenteException();
         }
 
-        Rodada novaRodada = new Rodada();
+        Evento novaRodada = new Evento();
         novaRodada.setGrupo(grupo);
-        novaRodada.setDataRodada(dto.data());
-        novaRodada.setHoraRodada(dto.horario());
-        novaRodada.setStatusRodada(StatusRodada.AGENDADA);
+        novaRodada.setData(dto.data());
+        novaRodada.setHora(dto.horario());
+        novaRodada.setStatus(StatusEvento.AGENDADO);
 
         if (temEnderecoPreenchido(dto.enderecoAlternativo())) {
             Endereco novoEndereco = enderecoService.cadastrarEndereco(dto.enderecoAlternativo());
@@ -79,13 +81,13 @@ public class RodadaService {
             novaRodada.setEnderecoAlternativo(grupo.getEndereco());
         }
 
-        Rodada rodadaSalva = rodadaRepository.save(novaRodada);
+        Evento rodadaSalva = rodadaRepository.save(novaRodada);
         return paraRodadaDTO(rodadaSalva);
     }
 
     @Transactional
     public RodadaResponseDTO atualizarEnderecoAlternativo(Long rodadaId, Long usuarioId, EnderecoRequestDTO dto) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
         if (!temEnderecoPreenchido(dto)) {
             throw new RequisicaoInvalidaException("Informe pelo menos a rua/avenida e a cidade do endereço alternativo.");
@@ -98,7 +100,7 @@ public class RodadaService {
 
     @Transactional
     public RodadaResponseDTO removerEnderecoAlternativo(Long rodadaId, Long usuarioId) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
         rodada.setEnderecoAlternativo(rodada.getGrupo().getEndereco());
         return paraRodadaDTO(rodadaRepository.save(rodada));
@@ -106,18 +108,18 @@ public class RodadaService {
 
     @Transactional
     public RodadaStatusResponseDTO iniciarRodada(Long rodadaId, Long usuarioId) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
 
-        if (rodada.getStatusRodada() != StatusRodada.AGENDADA) {
+        if (rodada.getStatus() != StatusEvento.AGENDADO) {
             throw new OperacaoInvalidaException("Só é possível iniciar uma rodada que está agendada.");
         }
 
         LocalDateTime agora = LocalDateTime.now();
-        rodada.setStatusRodada(StatusRodada.EM_ANDAMENTO);
-        rodada.setIniciadaEm(agora);
+        rodada.setStatus(StatusEvento.EM_ANDAMENTO);
+        rodada.setIniciadoEm(agora);
         rodada.setDataCheckInFechado(agora);
-        Rodada salva = rodadaRepository.save(rodada);
+        Evento salva = rodadaRepository.save(rodada);
 
         pagamentoService.criarPagamentoAoFinalizarCheckIn(rodadaId);
 
@@ -126,32 +128,34 @@ public class RodadaService {
 
     @Transactional
     public RodadaStatusResponseDTO finalizarRodada(Long rodadaId, Long usuarioId) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
 
-        if (rodada.getStatusRodada() == StatusRodada.FINALIZADA) {
+        if (rodada.getStatus() == StatusEvento.FINALIZADO) {
             throw new OperacaoInvalidaException("Esta rodada já está finalizada.");
         }
-        if (rodada.getStatusRodada() != StatusRodada.EM_ANDAMENTO) {
+        if (rodada.getStatus() != StatusEvento.EM_ANDAMENTO) {
             throw new OperacaoInvalidaException("Inicie a rodada antes de finalizá-la.");
         }
 
         LocalDateTime agora = LocalDateTime.now();
         ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(rodada.getGrupo());
 
-        rodada.setStatusRodada(StatusRodada.FINALIZADA);
-        rodada.setFinalizadaEm(agora);
+        rodada.setStatus(StatusEvento.FINALIZADO);
+        rodada.setFinalizadoEm(agora);
         rodada.setVotacaoAte(agora.plusHours(configuracao.getPrazoAvaliacaoHoras()));
-        rodada.setCategoriasVotacao(new HashSet<>(configuracao.getCategoriasAtivas()));
+        rodada.setCategoriasVotacao(configuracao.getCategoriasAtivas().stream()
+                .map(CategoriaVoto::comoCategoria)
+                .collect(Collectors.toCollection(HashSet::new)));
         return paraStatusDTO(rodadaRepository.save(rodada));
     }
 
     @Transactional
     public RodadaStatusResponseDTO encerrarVotacao(Long rodadaId, Long usuarioId) {
-        Rodada rodada = buscarRodada(rodadaId);
+        Evento rodada = buscarRodada(rodadaId);
         permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
 
-        if (rodada.getStatusRodada() != StatusRodada.FINALIZADA) {
+        if (rodada.getStatus() != StatusEvento.FINALIZADO) {
             throw new OperacaoInvalidaException("A votação só existe depois que a rodada é finalizada.");
         }
         if (!VotacaoService.ABERTA.equals(VotacaoService.situacao(rodada))) {
@@ -162,7 +166,7 @@ public class RodadaService {
         return paraStatusDTO(rodadaRepository.save(rodada));
     }
 
-    public static RodadaResponseDTO paraRodadaDTO(Rodada rodada) {
+    public static RodadaResponseDTO paraRodadaDTO(Evento rodada) {
         Endereco resolvido = rodada.getEnderecoResolvido();
         EnderecoResponseDTO enderecoDTO = null;
         if (resolvido != null) {
@@ -184,13 +188,23 @@ public class RodadaService {
         return new RodadaResponseDTO(
                 rodada.getId(),
                 rodada.getGrupo().getId(),
-                rodada.getDataRodada(),
-                rodada.getHoraRodada(),
-                rodada.getStatusRodada().name(),
+                rodada.getData(),
+                rodada.getHora(),
+                statusParaApi(rodada.getStatus()),
                 enderecoDTO,
                 alternativo,
                 rodada.getValorPorParticipante()
         );
+    }
+
+    /** O núcleo usa AGENDADO/FINALIZADO...; o frontend do PelManager espera AGENDADA/FINALIZADA... */
+    private static String statusParaApi(StatusEvento status) {
+        return switch (status) {
+            case AGENDADO -> "AGENDADA";
+            case EM_ANDAMENTO -> "EM_ANDAMENTO";
+            case FINALIZADO -> "FINALIZADA";
+            case CANCELADO -> "CANCELADA";
+        };
     }
 
     private boolean temEnderecoPreenchido(EnderecoRequestDTO dto) {
@@ -200,17 +214,17 @@ public class RodadaService {
         return temLogradouro && temCidade;
     }
 
-    private Rodada buscarRodada(Long rodadaId) {
+    private Evento buscarRodada(Long rodadaId) {
         return rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
     }
 
-    private RodadaStatusResponseDTO paraStatusDTO(Rodada rodada) {
+    private RodadaStatusResponseDTO paraStatusDTO(Evento rodada) {
         return new RodadaStatusResponseDTO(
                 rodada.getId(),
-                rodada.getStatusRodada().name(),
-                rodada.getIniciadaEm(),
-                rodada.getFinalizadaEm(),
+                statusParaApi(rodada.getStatus()),
+                rodada.getIniciadoEm(),
+                rodada.getFinalizadoEm(),
                 rodada.getVotacaoAte()
         );
     }
