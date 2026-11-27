@@ -1,5 +1,9 @@
 package com.pelmanager.exception;
 
+import com.convoca.framework.exception.OperacaoInvalidaException;
+import com.convoca.framework.exception.CheckInDuplicadoException;
+import com.convoca.framework.exception.EventoNaoEncontradoException;
+import com.convoca.framework.exception.EventoAtivoExistenteException;
 import com.convoca.framework.exception.AcessoNegadoException;
 import com.convoca.framework.exception.CodigoConviteInvalidoException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
@@ -37,8 +41,8 @@ public class GlobalExceptionHandler extends RuntimeException {
     return ResponseEntity.status(HttpStatus.CONFLICT).body(erro);
   }
 
-  @ExceptionHandler(RodadaAtivaExistenteException.class)
-  public ResponseEntity<ErroResponseDTO> tratarRodadaAtivaExistente(RodadaAtivaExistenteException ex) {
+  @ExceptionHandler(EventoAtivoExistenteException.class)
+  public ResponseEntity<ErroResponseDTO> tratarRodadaAtivaExistente(EventoAtivoExistenteException ex) {
     ErroResponseDTO erro = new ErroResponseDTO(
             LocalDateTime.now(),
             HttpStatus.CONFLICT.value(),
@@ -69,8 +73,8 @@ public class GlobalExceptionHandler extends RuntimeException {
     return ResponseEntity.status(HttpStatus.CONFLICT).body(erro);
   }
 
-  @ExceptionHandler(RodadaNaoEncontradaException.class)
-  public ResponseEntity<ErroResponseDTO> tratarRodadaNaoEncontrada(RodadaNaoEncontradaException ex) {
+  @ExceptionHandler(EventoNaoEncontradoException.class)
+  public ResponseEntity<ErroResponseDTO> tratarRodadaNaoEncontrada(EventoNaoEncontradoException ex) {
     ErroResponseDTO erro = new ErroResponseDTO(
             LocalDateTime.now(),
             HttpStatus.NOT_FOUND.value(),

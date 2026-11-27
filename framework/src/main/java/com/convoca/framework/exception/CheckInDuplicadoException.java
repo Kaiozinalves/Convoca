@@ -1,4 +1,4 @@
-package com.pelmanager.exception;
+package com.convoca.framework.exception;
 
 public class CheckInDuplicadoException extends RuntimeException {
     public CheckInDuplicadoException(String message) {
@@ -6,6 +6,6 @@ public class CheckInDuplicadoException extends RuntimeException {
     }
 
     public CheckInDuplicadoException(){
-        super("Você já realizou o check-in para esta rodada.");
+        super("Você já realizou o check-in para este evento.");
     }
 }

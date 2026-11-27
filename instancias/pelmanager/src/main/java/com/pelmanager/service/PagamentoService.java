@@ -1,5 +1,7 @@
 package com.pelmanager.service;
 
+import com.convoca.framework.service.ServicoEvento;
+import com.convoca.framework.service.ServicoGrupo;
 import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.ConfiguracaoPelada;
 import com.pelmanager.entity.Pagamento;
@@ -8,7 +10,7 @@ import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.pelmanager.entity.enums.StatusPagamento;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
-import com.pelmanager.exception.RodadaNaoEncontradaException;
+import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.pelmanager.repository.PagamentoRepository;
 import com.convoca.framework.repository.EventoRepository;
@@ -27,35 +29,38 @@ public class PagamentoService {
     private final CheckInRepository checkInRepository;
     private final GerarQrCodeService qrCodeService;
     private final EventoRepository rodadaRepository;
-    private final PermissaoService permissaoService;
+    private final ServicoGrupo servicoGrupo;
+    private final ServicoEvento servicoEvento;
     private final PerfilPeladaService perfilPeladaService;
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
                             CheckInRepository checkInRepository,
                             GerarQrCodeService qrCodeService,
                             EventoRepository rodadaRepository,
-                            PermissaoService permissaoService,
+                            ServicoGrupo servicoGrupo,
+                            ServicoEvento servicoEvento,
                             PerfilPeladaService perfilPeladaService) {
         this.pagamentoRepository = pagamentoRepository;
         this.checkInRepository = checkInRepository;
         this.qrCodeService = qrCodeService;
         this.rodadaRepository = rodadaRepository;
-        this.permissaoService = permissaoService;
+        this.servicoGrupo = servicoGrupo;
+        this.servicoEvento = servicoEvento;
         this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
     public List<Pagamento> gerarPagamentosComoAdmin(Long rodadaId, Long usuarioAdminId) {
         Evento rodada = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
-        permissaoService.exigirAdmin(usuarioAdminId, rodada.getGrupo());
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
+        servicoGrupo.exigirAdmin(usuarioAdminId, rodada.getGrupo());
         return criarPagamentoAoFinalizarCheckIn(rodadaId);
     }
 
     @Transactional
     public List<Pagamento> criarPagamentoAoFinalizarCheckIn(Long rodadaId) {
         Evento rodada = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
 
         ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(rodada.getGrupo());
         if (!configuracao.isSistemaPagamentoAtivo()) {
@@ -123,7 +128,7 @@ public class PagamentoService {
     public void marcarPago(Long pagamentoId, Long usuarioAdminId) {
         var pagamento = pagamentoRepository.findById(pagamentoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Pagamento não encontrado"));
-        permissaoService.exigirAdmin(usuarioAdminId, pagamento.getRodada().getGrupo());
+        servicoGrupo.exigirAdmin(usuarioAdminId, pagamento.getRodada().getGrupo());
         pagamento.marcarComoPago();
         pagamentoRepository.save(pagamento);
     }
@@ -165,12 +170,9 @@ public class PagamentoService {
     @Transactional
     public List<Pagamento> registrarDesistencia(Long rodadaId, Long usuarioId, Long usuarioAdminId) {
         Evento rodada = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
-        permissaoService.exigirAdmin(usuarioAdminId, rodada.getGrupo());
-        checkInRepository.findByEventoIdAndParticipanteUsuarioId(rodadaId, usuarioId).ifPresent(checkIn -> {
-            checkIn.setStatus(StatusCheckIn.CANCELADO);
-            checkInRepository.save(checkIn);
-        });
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
+        servicoGrupo.exigirAdmin(usuarioAdminId, rodada.getGrupo());
+        servicoEvento.cancelarPresenca(rodadaId, usuarioId);
         CalcularPorDesistencia(rodadaId);
         return pagamentoRepository.findByRodadaId(rodadaId);
     }
@@ -178,7 +180,7 @@ public class PagamentoService {
     @Transactional
     public void CalcularPorDesistencia(Long rodadaId) {
         Evento rodada = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
 
         List<Pagamento> todos = pagamentoRepository.findByRodadaId(rodadaId);
         for (Pagamento p : todos) {

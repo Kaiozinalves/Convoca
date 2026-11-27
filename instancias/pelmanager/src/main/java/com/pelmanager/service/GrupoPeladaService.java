@@ -25,18 +25,15 @@ public class GrupoPeladaService {
 
     private final GrupoRepository grupoRepository;
     private final EventoRepository rodadaRepository;
-    private final PermissaoService permissaoService;
     private final PerfilPeladaService perfilPeladaService;
     private final ServicoGrupo servicoGrupo;
 
     public GrupoPeladaService(GrupoRepository grupoRepository,
                               EventoRepository rodadaRepository,
-                              PermissaoService permissaoService,
                               PerfilPeladaService perfilPeladaService,
                               ServicoGrupo servicoGrupo) {
         this.grupoRepository = grupoRepository;
         this.rodadaRepository = rodadaRepository;
-        this.permissaoService = permissaoService;
         this.perfilPeladaService = perfilPeladaService;
         this.servicoGrupo = servicoGrupo;
     }
@@ -136,7 +133,7 @@ public class GrupoPeladaService {
         Grupo grupo = grupoRepository.findById(grupoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Pelada não encontrada."));
 
-        permissaoService.exigirAdmin(dto.usuarioId(), grupo);
+        servicoGrupo.exigirAdmin(dto.usuarioId(), grupo);
 
         if (dto.melhorJogadorAtiva() == null || dto.melhorAssistenteAtiva() == null
                 || dto.bagreAtiva() == null || dto.prazoHoras() == null) {

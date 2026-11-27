@@ -4,7 +4,6 @@ import com.pelmanager.dto.EstatisticasResponseDTO;
 import com.pelmanager.dto.LinhaRankingTemporadaDTO;
 import com.pelmanager.dto.LinhaEstatisticaDTO;
 import com.pelmanager.dto.RankingTemporadaResponseDTO;
-import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.Gol;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
@@ -12,9 +11,9 @@ import com.pelmanager.entity.VotoRodada;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
-import com.pelmanager.exception.OperacaoInvalidaException;
+import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
-import com.pelmanager.exception.RodadaNaoEncontradaException;
+import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
 import com.convoca.framework.repository.GrupoRepository;
@@ -60,7 +59,7 @@ public class EstatisticasService {
 
     public EstatisticasResponseDTO daRodada(Long rodadaId) {
         if (!rodadaRepository.existsById(rodadaId)) {
-            throw new RodadaNaoEncontradaException(rodadaId);
+            throw new EventoNaoEncontradoException(rodadaId);
         }
         return montar(rodadaId, golRepository.findByRodadaIdOrderByIdAsc(rodadaId));
     }
@@ -78,7 +77,7 @@ public class EstatisticasService {
         }
 
         Evento rodadaAtual = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
         if (!rodadaAtual.getGrupo().getId().equals(grupoId)) {
             throw new RecursoNaoEncontradoException("A rodada não pertence a esta pelada.");
         }

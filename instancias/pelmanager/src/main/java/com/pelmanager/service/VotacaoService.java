@@ -1,5 +1,7 @@
 package com.pelmanager.service;
 
+import com.convoca.framework.service.ServicoEvento;
+import com.convoca.framework.service.ServicoGrupo;
 import com.pelmanager.dto.*;
 import com.pelmanager.dto.request.VotoRequestDTO;
 import com.convoca.framework.domain.CheckIn;
@@ -10,9 +12,9 @@ import com.pelmanager.entity.enums.CategoriaVoto;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
-import com.pelmanager.exception.OperacaoInvalidaException;
+import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
-import com.pelmanager.exception.RodadaNaoEncontradaException;
+import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
@@ -36,18 +38,21 @@ public class VotacaoService {
     private final VotoRodadaRepository votoRepository;
     private final CheckInRepository checkInRepository;
     private final UsuarioRepository usuarioRepository;
-    private final PermissaoService permissaoService;
+    private final ServicoGrupo servicoGrupo;
+    private final ServicoEvento servicoEvento;
 
     public VotacaoService(EventoRepository rodadaRepository,
                           VotoRodadaRepository votoRepository,
                           CheckInRepository checkInRepository,
                           UsuarioRepository usuarioRepository,
-                          PermissaoService permissaoService) {
+                          ServicoGrupo servicoGrupo,
+                          ServicoEvento servicoEvento) {
         this.rodadaRepository = rodadaRepository;
         this.votoRepository = votoRepository;
         this.checkInRepository = checkInRepository;
         this.usuarioRepository = usuarioRepository;
-        this.permissaoService = permissaoService;
+        this.servicoGrupo = servicoGrupo;
+        this.servicoEvento = servicoEvento;
     }
 
     @Transactional
@@ -73,14 +78,14 @@ public class VotacaoService {
             throw new RequisicaoInvalidaException("Você não pode votar em si mesmo.");
         }
 
-        Usuario votante = permissaoService.buscarUsuario(dto.votanteId());
-        if (!permissaoService.temCheckInConfirmado(rodadaId, votante.getId())) {
+        Usuario votante = servicoGrupo.buscarUsuario(dto.votanteId());
+        if (!servicoEvento.temCheckInConfirmado(rodadaId, votante.getId())) {
             throw new AcessoNegadoException("Apenas quem confirmou presença nesta rodada pode votar.");
         }
-        if (!permissaoService.temCheckInConfirmado(rodadaId, dto.votadoId())) {
+        if (!servicoEvento.temCheckInConfirmado(rodadaId, dto.votadoId())) {
             throw new RequisicaoInvalidaException("Você só pode votar em quem confirmou presença nesta rodada.");
         }
-        Usuario votado = permissaoService.buscarUsuario(dto.votadoId());
+        Usuario votado = servicoGrupo.buscarUsuario(dto.votadoId());
 
         if (votoRepository.existsByRodadaIdAndCategoriaAndVotanteId(rodadaId, dto.categoria(), votante.getId())) {
             throw new OperacaoInvalidaException("Você já votou nesta categoria.");
@@ -107,7 +112,7 @@ public class VotacaoService {
     @Transactional(readOnly = true)
     public VotacaoResponseDTO consultar(Long rodadaId, Long usuarioId) {
         Evento rodada = buscarRodada(rodadaId);
-        permissaoService.exigirParticipante(usuarioId, rodada.getGrupo());
+        servicoGrupo.exigirParticipante(usuarioId, rodada.getGrupo());
 
         String situacao = situacao(rodada);
         if (rodada.getStatus() != StatusEvento.FINALIZADO) {
@@ -221,6 +226,6 @@ public class VotacaoService {
 
     private Evento buscarRodada(Long rodadaId) {
         return rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
     }
 }

@@ -1,14 +1,15 @@
 package com.pelmanager.service;
 
+import com.convoca.framework.service.ServicoEvento;
 import com.pelmanager.dto.AvaliacaoResponseDTO;
 import com.pelmanager.dto.request.AvaliacaoRequestDTO;
 import com.pelmanager.entity.Avaliacao;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.convoca.framework.domain.enums.StatusEvento;
-import com.pelmanager.exception.OperacaoInvalidaException;
+import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
-import com.pelmanager.exception.RodadaNaoEncontradaException;
+import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.repository.AvaliacaoRepository;
 import com.convoca.framework.repository.EventoRepository;
@@ -24,23 +25,23 @@ public class AvaliacaoService {
     private final AvaliacaoRepository avaliacaoRepository;
     private final EventoRepository rodadaRepository;
     private final UsuarioRepository usuarioRepository;
-    private final PermissaoService permissaoService;
+    private final ServicoEvento servicoEvento;
 
     public AvaliacaoService(AvaliacaoRepository avaliacaoRepository,
                             EventoRepository rodadaRepository,
                             UsuarioRepository usuarioRepository,
-                            PermissaoService permissaoService) {
+                            ServicoEvento servicoEvento) {
         this.avaliacaoRepository = avaliacaoRepository;
         this.rodadaRepository = rodadaRepository;
         this.usuarioRepository = usuarioRepository;
-        this.permissaoService = permissaoService;
+        this.servicoEvento = servicoEvento;
     }
 
     @Transactional
     public AvaliacaoResponseDTO avaliarJogador(AvaliacaoRequestDTO dto){
 
         Evento rodada = rodadaRepository.findById(dto.rodadaId())
-                .orElseThrow(() -> new RodadaNaoEncontradaException(dto.rodadaId()));
+                .orElseThrow(() -> new EventoNaoEncontradoException(dto.rodadaId()));
 
         if (rodada.getStatus() != StatusEvento.FINALIZADO) {
             throw new OperacaoInvalidaException("As avaliações só são permitidas após o fim da rodada.");
@@ -62,8 +63,8 @@ public class AvaliacaoService {
         if (avaliador.getId().equals(avaliado.getId())) {
             throw new RequisicaoInvalidaException("Você não pode avaliar a si mesmo.");
         }
-        if (!permissaoService.temCheckInConfirmado(rodada.getId(), avaliador.getId())
-                || !permissaoService.temCheckInConfirmado(rodada.getId(), avaliado.getId())) {
+        if (!servicoEvento.temCheckInConfirmado(rodada.getId(), avaliador.getId())
+                || !servicoEvento.temCheckInConfirmado(rodada.getId(), avaliado.getId())) {
             throw new RequisicaoInvalidaException("Só jogadores confirmados nesta rodada podem participar da avaliação.");
         }
 

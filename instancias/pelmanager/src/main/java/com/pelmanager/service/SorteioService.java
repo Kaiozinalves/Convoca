@@ -1,5 +1,6 @@
 package com.pelmanager.service;
 
+import com.convoca.framework.service.ServicoGrupo;
 import com.pelmanager.dto.JogadorSorteioDTO;
 import com.pelmanager.dto.JogadorTimeResponseDTO;
 import com.pelmanager.dto.SorteioResponseDTO;
@@ -11,8 +12,8 @@ import com.convoca.framework.domain.Equipe;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.Posicao;
 import com.convoca.framework.domain.enums.StatusCheckIn;
-import com.pelmanager.exception.OperacaoInvalidaException;
-import com.pelmanager.exception.RodadaNaoEncontradaException;
+import com.convoca.framework.exception.OperacaoInvalidaException;
+import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.pelmanager.repository.AvaliacaoRepository;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
@@ -35,27 +36,27 @@ public class SorteioService {
     private final AvaliacaoRepository avaliacaoRepository;
     private final EventoRepository rodadaRepository;
     private final EquipeRepository timeRepository;
-    private final PermissaoService permissaoService;
+    private final ServicoGrupo servicoGrupo;
     private final PerfilPeladaService perfilPeladaService;
 
     public SorteioService(CheckInRepository checkInRepository, AvaliacaoRepository avaliacaoRepository,
                           EventoRepository rodadaRepository, EquipeRepository timeRepository,
-                          PermissaoService permissaoService,
+                          ServicoGrupo servicoGrupo,
                           PerfilPeladaService perfilPeladaService) {
         this.checkInRepository = checkInRepository;
         this.avaliacaoRepository = avaliacaoRepository;
         this.rodadaRepository = rodadaRepository;
         this.timeRepository = timeRepository;
-        this.permissaoService = permissaoService;
+        this.servicoGrupo = servicoGrupo;
         this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
     public SorteioResponseDTO sortearTimes(Long rodadaId, Long usuarioId) {
         Evento rodada = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
 
-        permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
+        servicoGrupo.exigirAdmin(usuarioId, rodada.getGrupo());
 
         List<CheckIn> confirmados = buscarJogadoresConfirmados(rodadaId);
         int numTimes = calcularNumeroDeTimes(confirmados.size());
@@ -106,9 +107,9 @@ public class SorteioService {
     @Transactional
     public SorteioResponseDTO sortearTimesAleatorio(Long rodadaId, Long usuarioId) {
         Evento rodada = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
 
-        permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
+        servicoGrupo.exigirAdmin(usuarioId, rodada.getGrupo());
 
         List<CheckIn> confirmados = buscarJogadoresConfirmados(rodadaId);
         int numTimes = calcularNumeroDeTimes(confirmados.size());

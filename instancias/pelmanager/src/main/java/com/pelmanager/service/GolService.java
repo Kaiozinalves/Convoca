@@ -1,5 +1,7 @@
 package com.pelmanager.service;
 
+import com.convoca.framework.service.ServicoEvento;
+import com.convoca.framework.service.ServicoGrupo;
 import com.pelmanager.dto.GolResponseDTO;
 import com.pelmanager.dto.JogadorResumoDTO;
 import com.pelmanager.dto.request.GolRequestDTO;
@@ -11,10 +13,10 @@ import com.convoca.framework.domain.Usuario;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
-import com.pelmanager.exception.OperacaoInvalidaException;
+import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
-import com.pelmanager.exception.RodadaNaoEncontradaException;
+import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
 import com.convoca.framework.repository.EventoRepository;
@@ -31,25 +33,28 @@ public class GolService {
     private final GolRepository golRepository;
     private final CheckInRepository checkInRepository;
     private final EventoRepository rodadaRepository;
-    private final PermissaoService permissaoService;
+    private final ServicoGrupo servicoGrupo;
+    private final ServicoEvento servicoEvento;
 
     public GolService(GolRepository golRepository,
                       CheckInRepository checkInRepository,
                       EventoRepository rodadaRepository,
-                      PermissaoService permissaoService) {
+                      ServicoGrupo servicoGrupo,
+                      ServicoEvento servicoEvento) {
         this.golRepository = golRepository;
         this.checkInRepository = checkInRepository;
         this.rodadaRepository = rodadaRepository;
-        this.permissaoService = permissaoService;
+        this.servicoGrupo = servicoGrupo;
+        this.servicoEvento = servicoEvento;
     }
 
     @Transactional
     public GolResponseDTO registrar(Long rodadaId, GolRequestDTO dto) {
         Evento rodada = buscarRodada(rodadaId);
-        Participante registrador = permissaoService.exigirParticipante(dto.usuarioId(), rodada.getGrupo());
+        Participante registrador = servicoGrupo.exigirParticipante(dto.usuarioId(), rodada.getGrupo());
 
         validarStatusParaEventos(rodada, registrador.isAdmin());
-        if (!registrador.isAdmin() && !permissaoService.temCheckInConfirmado(rodadaId, dto.usuarioId())) {
+        if (!registrador.isAdmin() && !servicoEvento.temCheckInConfirmado(rodadaId, dto.usuarioId())) {
             throw new AcessoNegadoException("Apenas quem confirmou presença nesta rodada pode registrar gols.");
         }
 
@@ -60,7 +65,7 @@ public class GolService {
         gol.setRodada(rodada);
         gol.setAutor(autor);
         gol.setAssistente(assistente);
-        gol.setRegistradoPor(permissaoService.buscarUsuario(dto.usuarioId()));
+        gol.setRegistradoPor(servicoGrupo.buscarUsuario(dto.usuarioId()));
         gol.setRegistradoEm(LocalDateTime.now());
 
         return paraDTO(golRepository.save(gol));
@@ -77,13 +82,13 @@ public class GolService {
     @Transactional
     public GolResponseDTO corrigir(Long rodadaId, Long golId, GolRequestDTO dto) {
         Evento rodada = buscarRodada(rodadaId);
-        permissaoService.exigirAdmin(dto.usuarioId(), rodada.getGrupo());
+        servicoGrupo.exigirAdmin(dto.usuarioId(), rodada.getGrupo());
         validarStatusParaEventos(rodada, true);
 
         Gol gol = buscarGol(rodadaId, golId);
         gol.setAutor(jogadorDaRodada(rodadaId, dto.autorId(), "autor do gol"));
         gol.setAssistente(assistenteDaRodada(rodadaId, dto));
-        gol.setCorrigidoPor(permissaoService.buscarUsuario(dto.usuarioId()));
+        gol.setCorrigidoPor(servicoGrupo.buscarUsuario(dto.usuarioId()));
         gol.setCorrigidoEm(LocalDateTime.now());
 
         return paraDTO(golRepository.save(gol));
@@ -92,7 +97,7 @@ public class GolService {
     @Transactional
     public void remover(Long rodadaId, Long golId, Long usuarioId) {
         Evento rodada = buscarRodada(rodadaId);
-        permissaoService.exigirAdmin(usuarioId, rodada.getGrupo());
+        servicoGrupo.exigirAdmin(usuarioId, rodada.getGrupo());
         validarStatusParaEventos(rodada, true);
 
         golRepository.delete(buscarGol(rodadaId, golId));
@@ -143,10 +148,10 @@ public class GolService {
         if (usuarioId == null) {
             throw new RequisicaoInvalidaException("Informe o " + papel + ".");
         }
-        if (!permissaoService.temCheckInConfirmado(rodadaId, usuarioId)) {
+        if (!servicoEvento.temCheckInConfirmado(rodadaId, usuarioId)) {
             throw new RequisicaoInvalidaException("O " + papel + " precisa ter confirmado presença nesta rodada.");
         }
-        return permissaoService.buscarUsuario(usuarioId);
+        return servicoGrupo.buscarUsuario(usuarioId);
     }
 
     private Gol buscarGol(Long rodadaId, Long golId) {
@@ -157,7 +162,7 @@ public class GolService {
 
     private Evento buscarRodada(Long rodadaId) {
         return rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
+                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
     }
 
     private GolResponseDTO paraDTO(Gol gol) {

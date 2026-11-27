@@ -1,5 +1,6 @@
 package com.pelmanager.service;
 
+import com.convoca.framework.service.ServicoGrupo;
 import com.pelmanager.dto.ConfiguracaoPagamentoDTO;
 import com.pelmanager.entity.ConfiguracaoPelada;
 import com.convoca.framework.domain.Grupo;
@@ -12,14 +13,14 @@ import java.math.BigDecimal;
 @Service
 public class ConfiguracaoPagamentoService {
     private final GrupoRepository grupoPeladaRepository;
-    private final PermissaoService permissaoService;
+    private final ServicoGrupo servicoGrupo;
     private final PerfilPeladaService perfilPeladaService;
 
     public ConfiguracaoPagamentoService(GrupoRepository grupoPeladaRepository,
-                                        PermissaoService permissaoService,
+                                        ServicoGrupo servicoGrupo,
                                         PerfilPeladaService perfilPeladaService) {
         this.grupoPeladaRepository = grupoPeladaRepository;
-        this.permissaoService = permissaoService;
+        this.servicoGrupo = servicoGrupo;
         this.perfilPeladaService = perfilPeladaService;
     }
 
@@ -28,7 +29,7 @@ public class ConfiguracaoPagamentoService {
         var grupo = grupoPeladaRepository.findById(idGrupo)
                 .orElseThrow(() -> new IllegalArgumentException("Grupo não encontrado"));
 
-        permissaoService.exigirAdmin(config.usuarioId(), grupo);
+        servicoGrupo.exigirAdmin(config.usuarioId(), grupo);
 
         boolean ativo = Boolean.TRUE.equals(config.ativo());
         String chavePix = config.chavePixGerente() != null ? config.chavePixGerente().trim() : null;
