@@ -4,18 +4,18 @@ import com.pelmanager.dto.EstatisticasResponseDTO;
 import com.pelmanager.dto.LinhaRankingTemporadaDTO;
 import com.pelmanager.dto.LinhaEstatisticaDTO;
 import com.pelmanager.dto.RankingTemporadaResponseDTO;
-import com.pelmanager.entity.CheckIn;
+import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.Gol;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.VotoRodada;
 import com.pelmanager.entity.enums.CategoriaVoto;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
-import com.pelmanager.repository.CheckInRepository;
+import com.convoca.framework.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
 import com.convoca.framework.repository.GrupoRepository;
 import com.convoca.framework.repository.EventoRepository;
@@ -146,7 +146,7 @@ public class EstatisticasService {
 
             List<VotoRodada> votosDaRodada = porRodada.getOrDefault(rodada.getId(), List.of());
             int totalEleitores = checkInRepository
-                    .findByRodadaIdAndStatus(rodada.getId(), StatusCheckIn.CONFIRMADO).size();
+                    .findByEventoIdAndStatus(rodada.getId(), StatusCheckIn.CONFIRMADO).size();
             boolean apuravel = VotacaoService.ENCERRADA.equals(VotacaoService.situacao(rodada))
                     || (totalEleitores > 0 && votosDaRodada.size() >= totalEleitores);
             if (!apuravel) continue;

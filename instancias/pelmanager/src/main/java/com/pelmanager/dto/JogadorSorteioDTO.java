@@ -1,6 +1,6 @@
 package com.pelmanager.dto;
 
-import com.pelmanager.entity.CheckIn;
+import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.enums.Posicao;
 
 public record JogadorSorteioDTO(

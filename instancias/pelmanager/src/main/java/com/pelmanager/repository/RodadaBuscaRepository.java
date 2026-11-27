@@ -1,7 +1,7 @@
 package com.pelmanager.repository;
 
 import com.convoca.framework.domain.Evento;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -30,9 +30,9 @@ public interface RodadaBuscaRepository extends Repository<Evento, Long> {
 
     // Linhas [rodadaId, quantidade de check-ins com esse status]
     @Query("""
-            SELECT c.rodada.id, COUNT(c) FROM CheckIn c
-            WHERE c.rodada.id IN :rodadaIds AND c.status = :status
-            GROUP BY c.rodada.id
+            SELECT c.evento.id, COUNT(c) FROM CheckIn c
+            WHERE c.evento.id IN :rodadaIds AND c.status = :status
+            GROUP BY c.evento.id
             """)
     List<Object[]> contarCheckinsPorRodada(@Param("rodadaIds") Collection<Long> rodadaIds,
                                            @Param("status") StatusCheckIn status);

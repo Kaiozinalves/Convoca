@@ -4,8 +4,8 @@ import com.convoca.framework.domain.Grupo;
 import com.convoca.framework.domain.Participante;
 import com.convoca.framework.domain.Usuario;
 import com.convoca.framework.service.ServicoGrupo;
-import com.pelmanager.entity.enums.StatusCheckIn;
-import com.pelmanager.repository.CheckInRepository;
+import com.convoca.framework.domain.enums.StatusCheckIn;
+import com.convoca.framework.repository.CheckInRepository;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,6 +38,6 @@ public class PermissaoService {
 
     public boolean temCheckInConfirmado(Long rodadaId, Long usuarioId) {
         return usuarioId != null
-                && checkInRepository.existsByRodadaIdAndUsuarioIdAndStatus(rodadaId, usuarioId, StatusCheckIn.CONFIRMADO);
+                && checkInRepository.existsByEventoIdAndParticipanteUsuarioIdAndStatus(rodadaId, usuarioId, StatusCheckIn.CONFIRMADO);
     }
 }

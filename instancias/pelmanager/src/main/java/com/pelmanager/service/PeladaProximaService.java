@@ -3,7 +3,7 @@ package com.pelmanager.service;
 import com.pelmanager.dto.PeladaProximaResponseDTO;
 import com.convoca.framework.domain.Endereco;
 import com.convoca.framework.domain.Evento;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.repository.ParticipanteRepository;

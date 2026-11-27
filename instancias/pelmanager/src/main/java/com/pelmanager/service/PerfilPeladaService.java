@@ -47,13 +47,6 @@ public class PerfilPeladaService {
         return perfil instanceof PerfilJogador jogador ? jogador : new PerfilJogador();
     }
 
-    /** Temporário: some no passo 3, quando o CheckIn passar a apontar para o Participante. */
-    public PerfilJogador perfilNoGrupo(Long usuarioId, Long grupoId) {
-        return participanteRepository.findByUsuarioIdAndGrupoId(usuarioId, grupoId)
-                .map(this::perfilDe)
-                .orElseGet(PerfilJogador::new);
-    }
-
     /** Preferência do usuário. Se ele nunca informou, devolve uma vazia, sem salvar. */
     public PreferenciaJogador preferenciaDe(Long usuarioId) {
         return preferenciaRepository.findByUsuarioId(usuarioId).orElseGet(PreferenciaJogador::new);

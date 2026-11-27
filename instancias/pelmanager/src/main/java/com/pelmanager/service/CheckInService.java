@@ -3,17 +3,18 @@ package com.pelmanager.service;
 import com.pelmanager.dto.CheckInResponseDTO;
 import com.pelmanager.dto.ParticipanteCheckInResponseDTO;
 import com.pelmanager.dto.request.CheckInRequestDTO;
-import com.pelmanager.entity.CheckIn;
+import com.convoca.framework.domain.CheckIn;
 import com.convoca.framework.domain.Evento;
+import com.convoca.framework.domain.Participante;
 import com.convoca.framework.domain.Usuario;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
 import com.pelmanager.exception.CheckInDuplicadoException;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
-import com.pelmanager.repository.CheckInRepository;
+import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.ParticipanteRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
@@ -65,11 +66,11 @@ public class CheckInService {
         Usuario usuario = usuarioRepository.findById(checkInRequestDTO.usuarioId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
 
-        if (!participanteRepository.existsByUsuarioIdAndGrupoId(usuario.getId(), rodada1.getGrupo().getId())) {
-            throw new AcessoNegadoException("Apenas membros do grupo podem fazer check-in nesta rodada.");
-        }
+        Participante participante = participanteRepository
+                .findByUsuarioIdAndGrupoId(usuario.getId(), rodada1.getGrupo().getId())
+                .orElseThrow(() -> new AcessoNegadoException("Apenas membros do grupo podem fazer check-in nesta rodada."));
 
-        Optional<CheckIn> existenteOpt = checkInRepository.findByRodadaIdAndUsuarioId(rodada1.getId(), usuario.getId());
+        Optional<CheckIn> existenteOpt = checkInRepository.findByEventoIdAndParticipanteUsuarioId(rodada1.getId(), usuario.getId());
         CheckIn checkInSalvo;
         if (existenteOpt.isPresent()) {
             CheckIn existente = existenteOpt.get();
@@ -81,8 +82,8 @@ public class CheckInService {
             checkInSalvo = checkInRepository.save(existente);
         } else {
             CheckIn checkIn = new CheckIn();
-            checkIn.setRodada(rodada1);
-            checkIn.setUsuario(usuario);
+            checkIn.setEvento(rodada1);
+            checkIn.setParticipante(participante);
             checkIn.setDataHoraCheckin(LocalDateTime.now());
             checkIn.setStatus(StatusCheckIn.CONFIRMADO);
             checkInSalvo = checkInRepository.save(checkIn);
@@ -105,7 +106,7 @@ public class CheckInService {
         Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
 
-        checkInRepository.findByRodadaIdAndUsuarioId(rodada.getId(), usuarioId).ifPresent(checkIn -> {
+        checkInRepository.findByEventoIdAndParticipanteUsuarioId(rodada.getId(), usuarioId).ifPresent(checkIn -> {
             checkIn.setStatus(StatusCheckIn.CANCELADO);
             checkInRepository.save(checkIn);
         });
@@ -121,7 +122,7 @@ public class CheckInService {
         return rodada.getGrupo().getParticipantes().stream()
                 .map(participante -> {
                     Usuario usuario = participante.getUsuario();
-                    Optional<CheckIn> checkIn = checkInRepository.findByRodadaIdAndUsuarioId(rodadaId, usuario.getId());
+                    Optional<CheckIn> checkIn = checkInRepository.findByEventoIdAndParticipanteUsuarioId(rodadaId, usuario.getId());
 
                     String status = checkIn.isPresent() ? checkIn.get().getStatus().name() : "PENDENTE";
 
@@ -149,7 +150,7 @@ public class CheckInService {
         LocalDateTime agora = LocalDateTime.now();
         for (var participante : rodada.getGrupo().getParticipantes()) {
             Usuario usuario = participante.getUsuario();
-            Optional<CheckIn> checkInExistente = checkInRepository.findByRodadaIdAndUsuarioId(
+            Optional<CheckIn> checkInExistente = checkInRepository.findByEventoIdAndParticipanteUsuarioId(
                     rodadaId, usuario.getId());
 
             if (checkInExistente.isPresent()) {
@@ -163,8 +164,8 @@ public class CheckInService {
             }
 
             CheckIn checkIn = new CheckIn();
-            checkIn.setRodada(rodada);
-            checkIn.setUsuario(usuario);
+            checkIn.setEvento(rodada);
+            checkIn.setParticipante(participante);
             checkIn.setDataHoraCheckin(agora);
             checkIn.setStatus(StatusCheckIn.CONFIRMADO);
             checkInRepository.save(checkIn);

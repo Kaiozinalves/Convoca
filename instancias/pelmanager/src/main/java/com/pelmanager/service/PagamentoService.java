@@ -1,15 +1,15 @@
 package com.pelmanager.service;
 
-import com.pelmanager.entity.CheckIn;
+import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.ConfiguracaoPelada;
 import com.pelmanager.entity.Pagamento;
 import com.convoca.framework.domain.Evento;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.pelmanager.entity.enums.StatusPagamento;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
-import com.pelmanager.repository.CheckInRepository;
+import com.convoca.framework.repository.CheckInRepository;
 import com.pelmanager.repository.PagamentoRepository;
 import com.convoca.framework.repository.EventoRepository;
 import jakarta.transaction.Transactional;
@@ -62,7 +62,7 @@ public class PagamentoService {
             return pagamentoRepository.findByRodadaId(rodadaId);
         }
 
-        List<CheckIn> confirmados = checkInRepository.findByRodadaIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
+        List<CheckIn> confirmados = checkInRepository.findByEventoIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
 
         // Cancela pagamentos pendentes de quem não está mais confirmado
         List<Pagamento> existentes = pagamentoRepository.findByRodadaId(rodadaId);
@@ -167,7 +167,7 @@ public class PagamentoService {
         Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new RodadaNaoEncontradaException(rodadaId));
         permissaoService.exigirAdmin(usuarioAdminId, rodada.getGrupo());
-        checkInRepository.findByRodadaIdAndUsuarioId(rodadaId, usuarioId).ifPresent(checkIn -> {
+        checkInRepository.findByEventoIdAndParticipanteUsuarioId(rodadaId, usuarioId).ifPresent(checkIn -> {
             checkIn.setStatus(StatusCheckIn.CANCELADO);
             checkInRepository.save(checkIn);
         });
@@ -182,7 +182,7 @@ public class PagamentoService {
 
         List<Pagamento> todos = pagamentoRepository.findByRodadaId(rodadaId);
         for (Pagamento p : todos) {
-            boolean segueConfirmado = checkInRepository.existsByRodadaIdAndUsuarioIdAndStatus(
+            boolean segueConfirmado = checkInRepository.existsByEventoIdAndParticipanteUsuarioIdAndStatus(
                     rodadaId,
                     p.getUsuario().getId(),
                     StatusCheckIn.CONFIRMADO
@@ -193,7 +193,7 @@ public class PagamentoService {
             }
         }
 
-        long confirmadosAtuais = checkInRepository.contarPorRodadaEStatus(
+        long confirmadosAtuais = checkInRepository.contarPorEventoEStatus(
                 rodadaId,
                 StatusCheckIn.CONFIRMADO
         );

@@ -4,19 +4,19 @@ import com.pelmanager.dto.JogadorSorteioDTO;
 import com.pelmanager.dto.JogadorTimeResponseDTO;
 import com.pelmanager.dto.SorteioResponseDTO;
 import com.pelmanager.dto.TimeResponseDTO;
-import com.pelmanager.entity.CheckIn;
+import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.PerfilJogador;
 import com.convoca.framework.domain.Evento;
-import com.pelmanager.entity.Time;
+import com.convoca.framework.domain.Equipe;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.Posicao;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
 import com.pelmanager.repository.AvaliacaoRepository;
-import com.pelmanager.repository.CheckInRepository;
+import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
-import com.pelmanager.repository.TimeRepository;
+import com.convoca.framework.repository.EquipeRepository;
 import com.pelmanager.sorteio.BalanceadorDeTimes;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -34,12 +34,12 @@ public class SorteioService {
     private final CheckInRepository checkInRepository;
     private final AvaliacaoRepository avaliacaoRepository;
     private final EventoRepository rodadaRepository;
-    private final TimeRepository timeRepository;
+    private final EquipeRepository timeRepository;
     private final PermissaoService permissaoService;
     private final PerfilPeladaService perfilPeladaService;
 
     public SorteioService(CheckInRepository checkInRepository, AvaliacaoRepository avaliacaoRepository,
-                          EventoRepository rodadaRepository, TimeRepository timeRepository,
+                          EventoRepository rodadaRepository, EquipeRepository timeRepository,
                           PermissaoService permissaoService,
                           PerfilPeladaService perfilPeladaService) {
         this.checkInRepository = checkInRepository;
@@ -80,20 +80,20 @@ public class SorteioService {
                         checkIn -> checkIn.getUsuario().getId(),
                         checkIn -> checkIn));
 
-        List<Time> timesSorteados = new ArrayList<>();
+        List<Equipe> timesSorteados = new ArrayList<>();
         int index = 1;
         for (BalanceadorDeTimes.TimeMontado timeMontado : resultado.times()) {
-            Time time = new Time();
+            Equipe time = new Equipe();
             time.setNome("Time " + index++);
-            time.setRodada(rodada);
+            time.setEvento(rodada);
 
             List<CheckIn> jogadoresDoTime = timeMontado.escalacoes().stream()
                     .map(escalacao -> checkInPorUsuarioId.get(escalacao.jogador().id()))
                     .filter(Objects::nonNull)
                     .toList();
 
-            jogadoresDoTime.forEach(checkIn -> checkIn.setTime(time));
-            time.setJogadores(jogadoresDoTime);
+            jogadoresDoTime.forEach(checkIn -> checkIn.setEquipe(time));
+            time.setMembros(jogadoresDoTime);
             timesSorteados.add(time);
         }
 
@@ -133,11 +133,11 @@ public class SorteioService {
                 .toList());
         Collections.shuffle(restante);
 
-        List<Time> times = new ArrayList<>();
+        List<Equipe> times = new ArrayList<>();
         for (int i = 0; i < numTimes; i++) {
-            Time time = new Time();
+            Equipe time = new Equipe();
             time.setNome("Time " + (i + 1));
-            time.setRodada(rodada);
+            time.setEvento(rodada);
             times.add(time);
         }
 
@@ -155,10 +155,10 @@ public class SorteioService {
         }
 
         for (int i = 0; i < numTimes; i++) {
-            Time time = times.get(i);
+            Equipe time = times.get(i);
             List<CheckIn> jogadoresDoTime = jogadoresPorTime.get(i);
-            jogadoresDoTime.forEach(checkIn -> checkIn.setTime(time));
-            time.setJogadores(jogadoresDoTime);
+            jogadoresDoTime.forEach(checkIn -> checkIn.setEquipe(time));
+            time.setMembros(jogadoresDoTime);
         }
 
         timeRepository.saveAll(times);
@@ -167,23 +167,23 @@ public class SorteioService {
     }
 
     public SorteioResponseDTO buscarTimesDaRodada(Long rodadaId) {
-        List<Time> times = timeRepository.findByRodadaId(rodadaId);
+        List<Equipe> times = timeRepository.findByEventoId(rodadaId);
         return new SorteioResponseDTO(rodadaId, mapearTimes(times));
     }
 
     private void limparSorteioAnterior(Long rodadaId) {
-        List<Time> antigos = timeRepository.findByRodadaId(rodadaId);
-        for (Time antigo : antigos) {
-            if (antigo.getJogadores() != null) {
-                antigo.getJogadores().forEach(checkIn -> checkIn.setTime(null));
+        List<Equipe> antigos = timeRepository.findByEventoId(rodadaId);
+        for (Equipe antigo : antigos) {
+            if (antigo.getMembros() != null) {
+                antigo.getMembros().forEach(checkIn -> checkIn.setEquipe(null));
             }
         }
         timeRepository.deleteAll(antigos);
     }
 
-    private List<TimeResponseDTO> mapearTimes(List<Time> times) {
+    private List<TimeResponseDTO> mapearTimes(List<Equipe> times) {
         return times.stream().map(time -> {
-            List<JogadorTimeResponseDTO> jogadoresDTO = time.getJogadores().stream()
+            List<JogadorTimeResponseDTO> jogadoresDTO = time.getMembros().stream()
                     .map(c -> new JogadorTimeResponseDTO(
                             c.getUsuario().getId(),
                             c.getUsuario().getNome(),
@@ -197,9 +197,7 @@ public class SorteioService {
     }
 
     private List<CheckIn> buscarJogadoresConfirmados(Long rodadaId) {
-        return checkInRepository.findAll().stream()
-                .filter(c -> c.getRodada().getId().equals(rodadaId) && c.getStatus() == StatusCheckIn.CONFIRMADO)
-                .toList();
+        return checkInRepository.findByEventoIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
     }
 
     private int calcularNumeroDeTimes(int totalConfirmados) {
@@ -233,10 +231,8 @@ public class SorteioService {
         }).toList();
     }
 
-    // Temporário: no passo 3 o CheckIn passa a apontar para o Participante e isto vira checkIn.getParticipante().
     private PerfilJogador perfil(CheckIn checkIn) {
-        return perfilPeladaService.perfilNoGrupo(
-                checkIn.getUsuario().getId(), checkIn.getRodada().getGrupo().getId());
+        return perfilPeladaService.perfilDe(checkIn.getParticipante());
     }
 
     private static boolean podeSerGoleiro(PerfilJogador perfil) {

@@ -23,9 +23,9 @@ public interface VotoRodadaRepository extends JpaRepository<VotoRodada, Long> {
             where v.rodada.id = :rodadaId
               and exists (
                     select c.id from CheckIn c
-                    where c.rodada.id = :rodadaId
-                      and c.usuario.id = v.votante.id
-                      and c.status = com.pelmanager.entity.enums.StatusCheckIn.CONFIRMADO)
+                    where c.evento.id = :rodadaId
+                      and c.participante.usuario.id = v.votante.id
+                      and c.status = com.convoca.framework.domain.enums.StatusCheckIn.CONFIRMADO)
             group by v.categoria, v.votado.id
             """)
     List<Object[]> apurarVotos(@Param("rodadaId") Long rodadaId);

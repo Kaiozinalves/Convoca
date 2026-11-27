@@ -2,18 +2,18 @@ package com.pelmanager.service;
 
 import com.pelmanager.dto.*;
 import com.pelmanager.dto.request.VotoRequestDTO;
-import com.pelmanager.entity.CheckIn;
+import com.convoca.framework.domain.CheckIn;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.VotoRodada;
 import com.pelmanager.entity.enums.CategoriaVoto;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
-import com.pelmanager.repository.CheckInRepository;
+import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import com.pelmanager.repository.VotoRodadaRepository;
@@ -114,7 +114,7 @@ public class VotacaoService {
             return new VotacaoResponseDTO(rodadaId, situacao, null, false, 0, List.of(), List.of());
         }
 
-        List<CheckIn> confirmados = checkInRepository.findByRodadaIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
+        List<CheckIn> confirmados = checkInRepository.findByEventoIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
         int totalEleitores = confirmados.size();
         boolean elegivel = confirmados.stream().anyMatch(c -> c.getUsuario().getId().equals(usuarioId));
         boolean encerrada = ENCERRADA.equals(situacao);

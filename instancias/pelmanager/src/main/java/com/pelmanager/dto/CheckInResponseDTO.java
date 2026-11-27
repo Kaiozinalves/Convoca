@@ -6,6 +6,6 @@ public record CheckInResponseDTO(
         Long usuarioId,
         String usuarioNome,
         java.time.LocalDateTime dataHoraCheckin,
-        com.pelmanager.entity.enums.StatusCheckIn status
+        com.convoca.framework.domain.enums.StatusCheckIn status
 ) {
 }

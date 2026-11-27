@@ -3,19 +3,19 @@ package com.pelmanager.service;
 import com.pelmanager.dto.GolResponseDTO;
 import com.pelmanager.dto.JogadorResumoDTO;
 import com.pelmanager.dto.request.GolRequestDTO;
-import com.pelmanager.entity.CheckIn;
+import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.Gol;
 import com.convoca.framework.domain.Participante;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
-import com.pelmanager.entity.enums.StatusCheckIn;
+import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.AcessoNegadoException;
 import com.pelmanager.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.pelmanager.exception.RodadaNaoEncontradaException;
-import com.pelmanager.repository.CheckInRepository;
+import com.convoca.framework.repository.CheckInRepository;
 import com.pelmanager.repository.GolRepository;
 import com.convoca.framework.repository.EventoRepository;
 import org.springframework.stereotype.Service;
@@ -121,8 +121,8 @@ public class GolService {
         }
         CheckIn checkInAutor = checkInConfirmado(rodadaId, dto.autorId(), "autor do gol");
         CheckIn checkInAssistente = checkInConfirmado(rodadaId, dto.assistenteId(), "assistente");
-        if (checkInAutor.getTime() == null || checkInAssistente.getTime() == null
-                || !checkInAutor.getTime().getId().equals(checkInAssistente.getTime().getId())) {
+        if (checkInAutor.getEquipe() == null || checkInAssistente.getEquipe() == null
+                || !checkInAutor.getEquipe().getId().equals(checkInAssistente.getEquipe().getId())) {
             throw new RequisicaoInvalidaException(
                     "A assistência deve ser atribuída a um jogador do mesmo time de quem fez o gol. Sorteie os times antes de registrar a assistência.");
         }
@@ -133,7 +133,7 @@ public class GolService {
         if (usuarioId == null) {
             throw new RequisicaoInvalidaException("Informe o " + papel + ".");
         }
-        return checkInRepository.findByRodadaIdAndUsuarioId(rodadaId, usuarioId)
+        return checkInRepository.findByEventoIdAndParticipanteUsuarioId(rodadaId, usuarioId)
                 .filter(checkIn -> checkIn.getStatus() == StatusCheckIn.CONFIRMADO)
                 .orElseThrow(() -> new RequisicaoInvalidaException(
                         "O " + papel + " precisa ter confirmado presença nesta rodada."));
