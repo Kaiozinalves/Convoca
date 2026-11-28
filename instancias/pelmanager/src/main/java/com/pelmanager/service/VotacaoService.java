@@ -11,19 +11,15 @@ import com.convoca.framework.domain.Voto;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
-import com.convoca.framework.exception.AcessoNegadoException;
-import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import com.convoca.framework.repository.VotoRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,54 +55,21 @@ public class VotacaoService {
     public VotoRegistradoDTO votar(Long rodadaId, VotoRequestDTO dto) {
         Evento rodada = buscarRodada(rodadaId);
 
-        if (rodada.getStatus() != StatusEvento.FINALIZADO) {
-            throw new OperacaoInvalidaException("A votação só abre depois que a rodada é finalizada.");
-        }
-        if (!ABERTA.equals(situacao(rodada))) {
-            throw new OperacaoInvalidaException("A votação desta rodada já foi encerrada.");
-        }
+        // Validação do request (API do PelManager); as regras do voto ficam no ServicoEvento.
         if (dto.categoria() == null) {
             throw new RequisicaoInvalidaException("Informe a categoria do voto.");
-        }
-        if (!rodada.getCategoriasVotacao().contains(dto.categoria().comoCategoria())) {
-            throw new OperacaoInvalidaException("Esta categoria não está ativa para esta rodada.");
         }
         if (dto.votanteId() == null || dto.votadoId() == null) {
             throw new RequisicaoInvalidaException("Informe quem está votando e em quem.");
         }
-        if (dto.votanteId().equals(dto.votadoId())) {
-            throw new RequisicaoInvalidaException("Você não pode votar em si mesmo.");
-        }
-
-        Usuario votante = servicoGrupo.buscarUsuario(dto.votanteId());
-        if (!servicoEvento.temCheckInConfirmado(rodadaId, votante.getId())) {
-            throw new AcessoNegadoException("Apenas quem confirmou presença nesta rodada pode votar.");
-        }
-        if (!servicoEvento.temCheckInConfirmado(rodadaId, dto.votadoId())) {
-            throw new RequisicaoInvalidaException("Você só pode votar em quem confirmou presença nesta rodada.");
-        }
-        Usuario votado = servicoGrupo.buscarUsuario(dto.votadoId());
-
-        if (votoRepository.existsByEventoIdAndCategoriaCodigoAndVotanteId(rodadaId, dto.categoria().name(), votante.getId())) {
-            throw new OperacaoInvalidaException("Você já votou nesta categoria.");
-        }
 
         Voto voto = new Voto();
-        voto.setEvento(rodada);
         voto.setCategoria(dto.categoria().comoCategoria());
-        voto.setVotante(votante);
-        voto.setVotado(votado);
-        voto.setDataVoto(LocalDateTime.now());
+        voto.setVotante(servicoGrupo.buscarUsuario(dto.votanteId()));
+        voto.setVotado(servicoGrupo.buscarUsuario(dto.votadoId()));
 
-        try {
-            // saveAndFlush: se duas requisições passarem juntas pela checagem acima,
-            // a constraint única do banco barra a segunda.
-            votoRepository.saveAndFlush(voto);
-        } catch (DataIntegrityViolationException e) {
-            throw new OperacaoInvalidaException("Você já votou nesta categoria.");
-        }
-
-        return new VotoRegistradoDTO(rodadaId, dto.categoria().name(), voto.getDataVoto());
+        Voto registrado = servicoEvento.registrarVoto(rodada, voto);
+        return new VotoRegistradoDTO(rodadaId, dto.categoria().name(), registrado.getDataVoto());
     }
 
     @Transactional(readOnly = true)
@@ -173,11 +136,7 @@ public class VotacaoService {
         if (rodada.getStatus() != StatusEvento.FINALIZADO) {
             return AGUARDANDO_RODADA;
         }
-        LocalDateTime prazo = rodada.getVotacaoAte();
-        if (prazo == null || LocalDateTime.now().isAfter(prazo)) {
-            return ENCERRADA;
-        }
-        return ABERTA;
+        return rodada.votacaoAberta() ? ABERTA : ENCERRADA;
     }
 
 

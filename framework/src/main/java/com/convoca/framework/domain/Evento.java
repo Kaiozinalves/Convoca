@@ -63,4 +63,11 @@ public class Evento {
     public boolean estaAberta() {
         return this.status != null && this.status.permiteCheckin();
     }
+
+    /** Votação e avaliação ficam abertas do fim do evento até o prazo {@code votacaoAte}. */
+    public boolean votacaoAberta() {
+        return this.status == StatusEvento.FINALIZADO
+                && this.votacaoAte != null
+                && !LocalDateTime.now().isAfter(this.votacaoAte);
+    }
 }

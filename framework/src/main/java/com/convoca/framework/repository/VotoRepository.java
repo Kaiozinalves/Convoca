@@ -1,5 +1,6 @@
 package com.convoca.framework.repository;
 
+import com.convoca.framework.domain.Categoria;
 import com.convoca.framework.domain.Voto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -28,4 +29,6 @@ public interface VotoRepository extends JpaRepository<Voto, Long> {
             group by v.categoria.codigo, v.votado.id
             """)
     List<Object[]> apurarVotos(@Param("eventoId") Long eventoId);
+
+    boolean existsByEventoIdAndCategoriaAndVotanteId(Long id, Categoria categoria, Long id1);
 }
