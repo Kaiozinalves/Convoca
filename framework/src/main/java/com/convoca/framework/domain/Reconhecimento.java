@@ -7,7 +7,8 @@ import lombok.Setter;
 /**
  * Resultado da apuração de um evento numa categoria: quem foi reconhecido.
  * Classe nova do framework: antes, o PelManager recalculava o vencedor a cada consulta e não o
- * guardava. Quem cria os registros é a {@code PoliticaReconhecimento} da instância (passo 7).
+ * guardava. Quem decide os vencedores é a {@code PoliticaReconhecimento} da instância; o
+ * {@code ServicoEvento.apurar} grava os registros (um por vencedor, então empate gera vários).
  */
 @Entity
 @Table(name = "reconhecimentos")

@@ -19,7 +19,6 @@ import com.convoca.framework.repository.ReconhecimentoRepository;
 import com.convoca.framework.repository.VotoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.repository.query.parser.Part;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

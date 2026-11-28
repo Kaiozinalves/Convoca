@@ -13,9 +13,7 @@ import com.convoca.framework.domain.enums.StatusEvento;
 import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
-import com.convoca.framework.repository.ParticipanteRepository;
 import com.convoca.framework.repository.EventoRepository;
-import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -27,23 +25,17 @@ import java.util.Optional;
 public class CheckInService {
     private final CheckInRepository checkInRepository;
     private final EventoRepository rodadaRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final ParticipanteRepository participanteRepository;
     private final ServicoGrupo servicoGrupo;
     private final ServicoEvento servicoEvento;
     private final PerfilPeladaService perfilPeladaService;
 
     public CheckInService(CheckInRepository checkInRepository,
                           EventoRepository rodadaRepository,
-                          UsuarioRepository usuarioRepository,
-                          ParticipanteRepository participanteRepository,
                           ServicoGrupo servicoGrupo,
                           ServicoEvento servicoEvento,
                           PerfilPeladaService perfilPeladaService) {
         this.checkInRepository = checkInRepository;
         this.rodadaRepository = rodadaRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.participanteRepository = participanteRepository;
         this.servicoGrupo = servicoGrupo;
         this.servicoEvento = servicoEvento;
         this.perfilPeladaService = perfilPeladaService;

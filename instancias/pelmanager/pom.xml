@@ -11,21 +11,8 @@
 	<groupId>com.pelmanager</groupId>
 	<artifactId>pelmanager</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<name>pelmanager</name>
+	<description>PelManager: instância do framework Convoca para gestão de peladas de futebol</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>
