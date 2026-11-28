@@ -15,7 +15,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,7 +28,7 @@ public class ConfiguracaoPelada extends PerfilGrupo {
     @Column(name = "sistema_pagamento_ativo", nullable = false)
     private boolean sistemaPagamentoAtivo = false;
 
-    // Valor total do campo, rateado entre os confirmados.
+    // Valor total do campo, rateado entre os confirmados pelo RateioDoCampo.
     @Column(name = "valor_total_pelada")
     private BigDecimal valorTotalPelada;
 
@@ -60,13 +59,5 @@ public class ConfiguracaoPelada extends PerfilGrupo {
         } else {
             categoriasAtivas.remove(categoria);
         }
-    }
-
-    // Calcula valor por pessoa
-    public BigDecimal calcularValorPorPessoa(int quantidade) {
-        if (!sistemaPagamentoAtivo || valorTotalPelada == null || quantidade <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return valorTotalPelada.divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP);
     }
 }

@@ -27,15 +27,18 @@ public class GrupoPeladaService {
     private final EventoRepository rodadaRepository;
     private final PerfilPeladaService perfilPeladaService;
     private final ServicoGrupo servicoGrupo;
+    private final PagamentoService pagamentoService;
 
     public GrupoPeladaService(GrupoRepository grupoRepository,
                               EventoRepository rodadaRepository,
                               PerfilPeladaService perfilPeladaService,
-                              ServicoGrupo servicoGrupo) {
+                              ServicoGrupo servicoGrupo,
+                              PagamentoService pagamentoService) {
         this.grupoRepository = grupoRepository;
         this.rodadaRepository = rodadaRepository;
         this.perfilPeladaService = perfilPeladaService;
         this.servicoGrupo = servicoGrupo;
+        this.pagamentoService = pagamentoService;
     }
 
     @Transactional
@@ -105,7 +108,7 @@ public class GrupoPeladaService {
                 .toList();
 
         List<RodadaResponseDTO> rodadas = rodadaRepository.findByGrupoIdOrderByIdDesc(id).stream()
-                .map(RodadaService::paraRodadaDTO)
+                .map(rodada -> RodadaService.paraRodadaDTO(rodada, pagamentoService.valorPorParticipante(rodada.getId())))
                 .toList();
 
         ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(grupo);

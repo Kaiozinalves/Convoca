@@ -22,6 +22,7 @@ import com.convoca.framework.repository.EventoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -65,7 +66,7 @@ public class RodadaService {
                     .orElseThrow(() -> new RecursoNaoEncontradoException("Endereço alternativo não encontrado."));
         }
         Evento rodadaSalva = servicoEvento.agendar(dto.grupoId(), dto.usuarioId(), dto.data(), dto.horario(), localAlternativo);
-        return paraRodadaDTO(rodadaSalva);
+        return paraRodadaDTO(rodadaSalva, null);   // evento recém-agendado ainda não tem cobrança
     }
 
     @Transactional
@@ -74,18 +75,20 @@ public class RodadaService {
             throw new RequisicaoInvalidaException("Informe pelo menos a rua/avenida e a cidade do endereço alternativo.");
         }
         Endereco novoEndereco = enderecoService.cadastrarEndereco(dto);
-        return paraRodadaDTO(servicoEvento.definirLocalAlternativo(rodadaId, usuarioId, novoEndereco));
+        return paraRodadaDTO(servicoEvento.definirLocalAlternativo(rodadaId, usuarioId, novoEndereco),
+                pagamentoService.valorPorParticipante(rodadaId));
     }
 
     @Transactional
     public RodadaResponseDTO removerEnderecoAlternativo(Long rodadaId, Long usuarioId) {
-        return paraRodadaDTO(servicoEvento.definirLocalAlternativo(rodadaId, usuarioId, null));
+        return paraRodadaDTO(servicoEvento.definirLocalAlternativo(rodadaId, usuarioId, null),
+                pagamentoService.valorPorParticipante(rodadaId));
     }
 
     @Transactional
     public RodadaStatusResponseDTO iniciarRodada(Long rodadaId, Long usuarioId) {
         Evento salva = servicoEvento.iniciar(rodadaId, usuarioId);
-        pagamentoService.criarPagamentoAoFinalizarCheckIn(rodadaId);   // até o passo 5 (PoliticaCobranca)
+        pagamentoService.criarPagamentoAoFinalizarCheckIn(rodadaId);   // até o passo 6 (fecharCheckIn)
         return paraStatusDTO(salva);
     }
 
@@ -115,7 +118,8 @@ public class RodadaService {
         return paraStatusDTO(rodadaRepository.save(rodada));
     }
 
-    public static RodadaResponseDTO paraRodadaDTO(Evento rodada) {
+    /** O valor por participante vem das cobranças (PagamentoService.valorPorParticipante), não do Evento. */
+    public static RodadaResponseDTO paraRodadaDTO(Evento rodada, BigDecimal valorPorParticipante) {
         Endereco resolvido = rodada.getEnderecoResolvido();
         EnderecoResponseDTO enderecoDTO = null;
         if (resolvido != null) {
@@ -142,7 +146,7 @@ public class RodadaService {
                 statusParaApi(rodada.getStatus()),
                 enderecoDTO,
                 alternativo,
-                rodada.getValorPorParticipante()
+                valorPorParticipante
         );
     }
 

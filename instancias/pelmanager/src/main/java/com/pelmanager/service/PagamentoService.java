@@ -14,13 +14,14 @@ import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.PagamentoRepository;
 import com.convoca.framework.repository.EventoRepository;
+import com.convoca.framework.hotspot.PoliticaCobranca;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @Service
 public class PagamentoService {
@@ -32,6 +33,7 @@ public class PagamentoService {
     private final ServicoGrupo servicoGrupo;
     private final ServicoEvento servicoEvento;
     private final PerfilPeladaService perfilPeladaService;
+    private final PoliticaCobranca politicaCobranca;
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
                             CheckInRepository checkInRepository,
@@ -39,7 +41,8 @@ public class PagamentoService {
                             EventoRepository rodadaRepository,
                             ServicoGrupo servicoGrupo,
                             ServicoEvento servicoEvento,
-                            PerfilPeladaService perfilPeladaService) {
+                            PerfilPeladaService perfilPeladaService,
+                            PoliticaCobranca politicaCobranca) {
         this.pagamentoRepository = pagamentoRepository;
         this.checkInRepository = checkInRepository;
         this.qrCodeService = qrCodeService;
@@ -47,6 +50,7 @@ public class PagamentoService {
         this.servicoGrupo = servicoGrupo;
         this.servicoEvento = servicoEvento;
         this.perfilPeladaService = perfilPeladaService;
+        this.politicaCobranca = politicaCobranca;
     }
 
     @Transactional
@@ -69,55 +73,56 @@ public class PagamentoService {
 
         List<CheckIn> confirmados = checkInRepository.findByEventoIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
 
-        // Cancela pagamentos pendentes de quem não está mais confirmado
-        List<Pagamento> existentes = pagamentoRepository.findByEventoId(rodadaId);
-        for (Pagamento p : existentes) {
-            boolean segueConfirmado = confirmados.stream()
-                    .anyMatch(c -> c.getUsuario().getId().equals(p.getUsuario().getId()));
-            if (!segueConfirmado && !p.foiPago()) {
-                p.setStatus(StatusPagamento.CANCELADO);
-                pagamentoRepository.save(p);
-            }
-        }
-
-        if (confirmados.isEmpty()) {
-            rodada.setValorPorParticipante(BigDecimal.ZERO);
-            rodadaRepository.save(rodada);
-            return pagamentoRepository.findByEventoId(rodadaId);
-        }
-
-        BigDecimal valorPorPessoa = configuracao.calcularValorPorPessoa(confirmados.size());
-        LocalDateTime agora = LocalDateTime.now();
-
-        for (CheckIn checkIn : confirmados) {
-            Optional<Pagamento> existenteOpt = pagamentoRepository.findByEventoIdAndUsuarioId(
-                    rodadaId, checkIn.getUsuario().getId()
-            );
-
-            if (existenteOpt.isPresent()) {
-                Pagamento existente = existenteOpt.get();
-                if (!existente.foiPago()) {
-                    existente.setValor(valorPorPessoa);
-                    existente.setStatus(StatusPagamento.PENDENTE);
-                    if (existente.getCriadoEm() == null) {
-                        existente.setCriadoEm(agora);
-                    }
-                    pagamentoRepository.save(existente);
-                }
-            } else {
-                Pagamento p = new Pagamento();
-                p.setEvento(rodada);
-                p.setUsuario(checkIn.getUsuario());
-                p.setValor(valorPorPessoa);
-                p.setStatus(StatusPagamento.PENDENTE);
-                p.setCriadoEm(agora);
-                pagamentoRepository.save(p);
-            }
-        }
-
-        rodada.setValorPorParticipante(valorPorPessoa);
-        rodadaRepository.save(rodada);
+        // A PoliticaCobranca (RateioDoCampo) diz quem deve quanto; aqui só conciliamos com o que já existe.
+        // TEMPORÁRIO: no passo 6 as cobranças passam a ser geradas uma vez, no fecharCheckIn do núcleo.
+        conciliar(rodadaId, politicaCobranca.gerarCobrancas(rodada, confirmados));
         return pagamentoRepository.findByEventoId(rodadaId);
+    }
+
+    /**
+     * Aplica as cobranças calculadas sobre os pagamentos já gravados: quem segue cobrado tem o valor
+     * atualizado (e volta a PENDENTE se tinha sido cancelado), quem não está mais na lista é cancelado
+     * e quem ainda não tinha pagamento ganha um. Pagamentos já pagos nunca mudam.
+     */
+    private void conciliar(Long rodadaId, List<Pagamento> cobrancas) {
+        Map<Long, Pagamento> cobrancaPorUsuario = new HashMap<>();
+        for (Pagamento cobranca : cobrancas) {
+            cobrancaPorUsuario.put(cobranca.getUsuario().getId(), cobranca);
+        }
+
+        for (Pagamento existente : pagamentoRepository.findByEventoId(rodadaId)) {
+            Pagamento cobranca = cobrancaPorUsuario.remove(existente.getUsuario().getId());
+            if (existente.foiPago()) {
+                continue;
+            }
+            if (cobranca == null) {
+                existente.setStatus(StatusPagamento.CANCELADO);
+            } else {
+                existente.setValor(cobranca.getValor());
+                existente.setStatus(StatusPagamento.PENDENTE);
+                if (existente.getCriadoEm() == null) {
+                    existente.setCriadoEm(cobranca.getCriadoEm());
+                }
+            }
+            pagamentoRepository.save(existente);
+        }
+
+        // Sobraram só as cobranças de quem ainda não tinha pagamento neste evento.
+        pagamentoRepository.saveAll(cobrancaPorUsuario.values());
+    }
+
+    /**
+     * Valor atual por participante, para o RodadaResponseDTO: o de uma cobrança pendente (ou, se todos
+     * já pagaram, o de uma paga). {@code null} quando não há cobrança ativa.
+     */
+    public BigDecimal valorPorParticipante(Long rodadaId) {
+        List<Pagamento> pagamentos = pagamentoRepository.findByEventoId(rodadaId);
+        return pagamentos.stream()
+                .filter(p -> p.getStatus() == StatusPagamento.PENDENTE)
+                .findFirst()
+                .or(() -> pagamentos.stream().filter(Pagamento::foiPago).findFirst())
+                .map(Pagamento::getValor)
+                .orElse(null);
     }
 
     public List<Pagamento> obterPagamentosRodada(Long rodadaId) {
@@ -177,51 +182,9 @@ public class PagamentoService {
         return pagamentoRepository.findByEventoId(rodadaId);
     }
 
+    /** Recalcula as cobranças depois que alguém sai: o rateio entre os que ficaram é o mesmo do check-in. */
     @Transactional
     public void CalcularPorDesistencia(Long rodadaId) {
-        Evento rodada = rodadaRepository.findById(rodadaId)
-                .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
-
-        List<Pagamento> todos = pagamentoRepository.findByEventoId(rodadaId);
-        for (Pagamento p : todos) {
-            boolean segueConfirmado = checkInRepository.existsByEventoIdAndParticipanteUsuarioIdAndStatus(
-                    rodadaId,
-                    p.getUsuario().getId(),
-                    StatusCheckIn.CONFIRMADO
-            );
-            if (!segueConfirmado && !p.foiPago()) {
-                p.setStatus(StatusPagamento.CANCELADO);
-                pagamentoRepository.save(p);
-            }
-        }
-
-        long confirmadosAtuais = checkInRepository.contarPorEventoEStatus(
-                rodadaId,
-                StatusCheckIn.CONFIRMADO
-        );
-
-        if (confirmadosAtuais <= 0) {
-            for (Pagamento p : todos) {
-                if (!p.foiPago()) {
-                    p.setStatus(StatusPagamento.CANCELADO);
-                    pagamentoRepository.save(p);
-                }
-            }
-            rodada.setValorPorParticipante(BigDecimal.ZERO);
-            rodadaRepository.save(rodada);
-            return;
-        }
-
-        BigDecimal novoValor = perfilPeladaService.configuracaoDe(rodada.getGrupo())
-                .calcularValorPorPessoa((int) confirmadosAtuais);
-
-        List<Pagamento> pendentes = obterPendentes(rodadaId);
-        for (Pagamento p : pendentes) {
-            p.setValor(novoValor);
-            pagamentoRepository.save(p);
-        }
-
-        rodada.setValorPorParticipante(novoValor);
-        rodadaRepository.save(rodada);
+        criarPagamentoAoFinalizarCheckIn(rodadaId);
     }
 }

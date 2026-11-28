@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -26,9 +25,6 @@ public class Evento {
     @ManyToOne
     @JoinColumn(name = "grupo_id", nullable = false)
     private Grupo grupo;
-
-    // TEMPORÁRIO: sai no passo 5, quando a PoliticaCobranca assumir o cálculo dos pagamentos.
-    private BigDecimal valorPorParticipante;
 
     private LocalDateTime dataCheckInFechado;
 

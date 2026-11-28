@@ -55,7 +55,7 @@ public class CheckInService {
     @Transactional
     public CheckInResponseDTO realizarCheckIn(CheckInRequestDTO checkInRequestDTO) {
         CheckIn checkIn = servicoEvento.confirmarPresenca(checkInRequestDTO.rodadaId(), checkInRequestDTO.usuarioId());
-        pagamentoService.criarPagamentoAoFinalizarCheckIn(checkIn.getEvento().getId());   // até o passo 5 (PoliticaCobranca)
+        pagamentoService.criarPagamentoAoFinalizarCheckIn(checkIn.getEvento().getId());   // até o passo 6 (fecharCheckIn)
 
         return new CheckInResponseDTO(
                 checkIn.getId(),
@@ -70,7 +70,7 @@ public class CheckInService {
     @Transactional
     public List<ParticipanteCheckInResponseDTO> cancelarCheckIn(Long rodadaId, Long usuarioId) {
         servicoEvento.cancelarPresenca(rodadaId, usuarioId);
-        pagamentoService.CalcularPorDesistencia(rodadaId);   // até o passo 5 (PoliticaCobranca)
+        pagamentoService.CalcularPorDesistencia(rodadaId);   // até o passo 6 (fecharCheckIn)
         return listarStatusDaRodada(rodadaId);
     }
 
