@@ -14,7 +14,7 @@ import com.pelmanager.entity.enums.Posicao;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.EventoNaoEncontradoException;
-import com.pelmanager.repository.AvaliacaoRepository;
+import com.convoca.framework.repository.AvaliacaoRepository;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.EquipeRepository;
@@ -225,7 +225,7 @@ public class SorteioService {
     private List<JogadorSorteioDTO> calcularOverallDosJogadores(List<CheckIn> confirmados) {
         return confirmados.stream().map(c -> {
             Usuario u = c.getUsuario();
-            Double media = avaliacaoRepository.calcularMediaDoJogador(u.getId());
+            Double media = avaliacaoRepository.calcularMediaDoUsuario(u.getId());
             double overallFinal = (media != null) ? media : 5.0;
             PerfilJogador perfil = perfil(c);
             return new JogadorSorteioDTO(c, perfil.getPosicaoPrimaria(), perfil.getPosicaoSecundaria(), overallFinal);

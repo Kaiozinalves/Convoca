@@ -7,7 +7,7 @@ import com.pelmanager.dto.RankingTemporadaResponseDTO;
 import com.pelmanager.entity.Gol;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
-import com.pelmanager.entity.VotoRodada;
+import com.convoca.framework.domain.Voto;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
@@ -19,7 +19,7 @@ import com.pelmanager.repository.GolRepository;
 import com.convoca.framework.repository.GrupoRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
-import com.pelmanager.repository.VotoRodadaRepository;
+import com.convoca.framework.repository.VotoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,14 +39,14 @@ public class EstatisticasService {
     private final GolRepository golRepository;
     private final EventoRepository rodadaRepository;
     private final GrupoRepository grupoRepository;
-    private final VotoRodadaRepository votoRepository;
+    private final VotoRepository votoRepository;
     private final CheckInRepository checkInRepository;
     private final UsuarioRepository usuarioRepository;
 
     public EstatisticasService(GolRepository golRepository,
                                EventoRepository rodadaRepository,
                                GrupoRepository grupoRepository,
-                               VotoRodadaRepository votoRepository,
+                               VotoRepository votoRepository,
                                CheckInRepository checkInRepository,
                                UsuarioRepository usuarioRepository) {
         this.golRepository = golRepository;
@@ -135,15 +135,15 @@ public class EstatisticasService {
     private Map<Long, Integer> contarVotosMelhorJogador(List<Evento> rodadas) {
         if (rodadas.isEmpty()) return Map.of();
         List<Long> idsRodadas = rodadas.stream().map(Evento::getId).toList();
-        Map<Long, List<VotoRodada>> porRodada = votoRepository
-                .findByRodadaIdInAndCategoria(idsRodadas, CategoriaVoto.MELHOR_JOGADOR).stream()
-                .collect(Collectors.groupingBy(v -> v.getRodada().getId()));
+        Map<Long, List<Voto>> porRodada = votoRepository
+                .findByEventoIdInAndCategoriaCodigo(idsRodadas, CategoriaVoto.MELHOR_JOGADOR.name()).stream()
+                .collect(Collectors.groupingBy(v -> v.getEvento().getId()));
 
         Map<Long, Integer> votos = new HashMap<>();
         for (Evento rodada : rodadas) {
             if (!rodada.getCategoriasVotacao().contains(CategoriaVoto.MELHOR_JOGADOR.comoCategoria())) continue;
 
-            List<VotoRodada> votosDaRodada = porRodada.getOrDefault(rodada.getId(), List.of());
+            List<Voto> votosDaRodada = porRodada.getOrDefault(rodada.getId(), List.of());
             int totalEleitores = checkInRepository
                     .findByEventoIdAndStatus(rodada.getId(), StatusCheckIn.CONFIRMADO).size();
             boolean apuravel = VotacaoService.ENCERRADA.equals(VotacaoService.situacao(rodada))

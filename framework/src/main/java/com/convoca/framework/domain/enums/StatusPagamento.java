@@ -1,4 +1,4 @@
-package com.pelmanager.entity.enums;
+package com.convoca.framework.domain.enums;
 
 public enum StatusPagamento {
     PENDENTE("Pendente"),

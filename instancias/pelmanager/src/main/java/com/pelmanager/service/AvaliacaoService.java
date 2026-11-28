@@ -3,7 +3,7 @@ package com.pelmanager.service;
 import com.convoca.framework.service.ServicoEvento;
 import com.pelmanager.dto.AvaliacaoResponseDTO;
 import com.pelmanager.dto.request.AvaliacaoRequestDTO;
-import com.pelmanager.entity.Avaliacao;
+import com.convoca.framework.domain.Avaliacao;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
 import com.convoca.framework.domain.enums.StatusEvento;
@@ -11,7 +11,7 @@ import com.convoca.framework.exception.OperacaoInvalidaException;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
-import com.pelmanager.repository.AvaliacaoRepository;
+import com.convoca.framework.repository.AvaliacaoRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
@@ -68,12 +68,12 @@ public class AvaliacaoService {
             throw new RequisicaoInvalidaException("Só jogadores confirmados nesta rodada podem participar da avaliação.");
         }
 
-        if (avaliacaoRepository.existsByRodadaIdAndAvaliadorIdAndAvaliadoId(rodada.getId(), avaliador.getId(), avaliado.getId())) {
+        if (avaliacaoRepository.existsByEventoIdAndAvaliadorIdAndAvaliadoId(rodada.getId(), avaliador.getId(), avaliado.getId())) {
             throw new OperacaoInvalidaException("Você já avaliou este jogador nesta rodada.");
         }
 
         Avaliacao avaliacao = new Avaliacao();
-        avaliacao.setRodada(rodada);
+        avaliacao.setEvento(rodada);
         avaliacao.setAvaliador(avaliador);
         avaliacao.setAvaliado(avaliado);
         avaliacao.setNota(dto.nota());
@@ -94,12 +94,12 @@ public class AvaliacaoService {
     }
 
     public List<AvaliacaoResponseDTO> listarPorRodada(Long rodadaId) {
-        List<Avaliacao> avaliacoes = avaliacaoRepository.findByRodadaId(rodadaId);
+        List<Avaliacao> avaliacoes = avaliacaoRepository.findByEventoId(rodadaId);
 
         return avaliacoes.stream()
                 .map(av -> new AvaliacaoResponseDTO(
                         av.getId(),
-                        av.getRodada().getId(),
+                        av.getEvento().getId(),
                         av.getAvaliador().getId(),
                         av.getAvaliado().getId(),
                         av.getAvaliado().getNome(),

@@ -4,15 +4,15 @@ import com.convoca.framework.service.ServicoEvento;
 import com.convoca.framework.service.ServicoGrupo;
 import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.ConfiguracaoPelada;
-import com.pelmanager.entity.Pagamento;
+import com.convoca.framework.domain.Pagamento;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.enums.StatusCheckIn;
-import com.pelmanager.entity.enums.StatusPagamento;
+import com.convoca.framework.domain.enums.StatusPagamento;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
-import com.pelmanager.repository.PagamentoRepository;
+import com.convoca.framework.repository.PagamentoRepository;
 import com.convoca.framework.repository.EventoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -64,13 +64,13 @@ public class PagamentoService {
 
         ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(rodada.getGrupo());
         if (!configuracao.isSistemaPagamentoAtivo()) {
-            return pagamentoRepository.findByRodadaId(rodadaId);
+            return pagamentoRepository.findByEventoId(rodadaId);
         }
 
         List<CheckIn> confirmados = checkInRepository.findByEventoIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
 
         // Cancela pagamentos pendentes de quem não está mais confirmado
-        List<Pagamento> existentes = pagamentoRepository.findByRodadaId(rodadaId);
+        List<Pagamento> existentes = pagamentoRepository.findByEventoId(rodadaId);
         for (Pagamento p : existentes) {
             boolean segueConfirmado = confirmados.stream()
                     .anyMatch(c -> c.getUsuario().getId().equals(p.getUsuario().getId()));
@@ -83,14 +83,14 @@ public class PagamentoService {
         if (confirmados.isEmpty()) {
             rodada.setValorPorParticipante(BigDecimal.ZERO);
             rodadaRepository.save(rodada);
-            return pagamentoRepository.findByRodadaId(rodadaId);
+            return pagamentoRepository.findByEventoId(rodadaId);
         }
 
         BigDecimal valorPorPessoa = configuracao.calcularValorPorPessoa(confirmados.size());
         LocalDateTime agora = LocalDateTime.now();
 
         for (CheckIn checkIn : confirmados) {
-            Optional<Pagamento> existenteOpt = pagamentoRepository.findByRodadaIdAndUsuarioId(
+            Optional<Pagamento> existenteOpt = pagamentoRepository.findByEventoIdAndUsuarioId(
                     rodadaId, checkIn.getUsuario().getId()
             );
 
@@ -106,7 +106,7 @@ public class PagamentoService {
                 }
             } else {
                 Pagamento p = new Pagamento();
-                p.setRodada(rodada);
+                p.setEvento(rodada);
                 p.setUsuario(checkIn.getUsuario());
                 p.setValor(valorPorPessoa);
                 p.setStatus(StatusPagamento.PENDENTE);
@@ -117,24 +117,24 @@ public class PagamentoService {
 
         rodada.setValorPorParticipante(valorPorPessoa);
         rodadaRepository.save(rodada);
-        return pagamentoRepository.findByRodadaId(rodadaId);
+        return pagamentoRepository.findByEventoId(rodadaId);
     }
 
     public List<Pagamento> obterPagamentosRodada(Long rodadaId) {
-        return pagamentoRepository.findByRodadaId(rodadaId);
+        return pagamentoRepository.findByEventoId(rodadaId);
     }
 
     @Transactional
     public void marcarPago(Long pagamentoId, Long usuarioAdminId) {
         var pagamento = pagamentoRepository.findById(pagamentoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Pagamento não encontrado"));
-        servicoGrupo.exigirAdmin(usuarioAdminId, pagamento.getRodada().getGrupo());
+        servicoGrupo.exigirAdmin(usuarioAdminId, pagamento.getEvento().getGrupo());
         pagamento.marcarComoPago();
         pagamentoRepository.save(pagamento);
     }
 
     public List<Pagamento> obterPendentes(Long rodadaId) {
-        return pagamentoRepository.findByRodadaIdAndStatus(
+        return pagamentoRepository.findByEventoIdAndStatus(
                 rodadaId,
                 StatusPagamento.PENDENTE
         );
@@ -147,7 +147,7 @@ public class PagamentoService {
 
     public String gerarQrCode(Long pagamentoId) {
         var pagamento = obterPagamento(pagamentoId);
-        String chavePixGerente = perfilPeladaService.configuracaoDe(pagamento.getRodada().getGrupo()).getChavePixGerente();
+        String chavePixGerente = perfilPeladaService.configuracaoDe(pagamento.getEvento().getGrupo()).getChavePixGerente();
 
         if (chavePixGerente == null || chavePixGerente.isEmpty()) {
             throw new RequisicaoInvalidaException("Chave PIX não configurada no grupo");
@@ -158,7 +158,7 @@ public class PagamentoService {
 
     public String gerarCopiaECola(Long pagamentoId) {
         var pagamento = obterPagamento(pagamentoId);
-        String chavePixGerente = perfilPeladaService.configuracaoDe(pagamento.getRodada().getGrupo()).getChavePixGerente();
+        String chavePixGerente = perfilPeladaService.configuracaoDe(pagamento.getEvento().getGrupo()).getChavePixGerente();
 
         if (chavePixGerente == null || chavePixGerente.isEmpty()) {
             throw new RequisicaoInvalidaException("Chave PIX não configurada no grupo");
@@ -174,7 +174,7 @@ public class PagamentoService {
         servicoGrupo.exigirAdmin(usuarioAdminId, rodada.getGrupo());
         servicoEvento.cancelarPresenca(rodadaId, usuarioId);
         CalcularPorDesistencia(rodadaId);
-        return pagamentoRepository.findByRodadaId(rodadaId);
+        return pagamentoRepository.findByEventoId(rodadaId);
     }
 
     @Transactional
@@ -182,7 +182,7 @@ public class PagamentoService {
         Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
 
-        List<Pagamento> todos = pagamentoRepository.findByRodadaId(rodadaId);
+        List<Pagamento> todos = pagamentoRepository.findByEventoId(rodadaId);
         for (Pagamento p : todos) {
             boolean segueConfirmado = checkInRepository.existsByEventoIdAndParticipanteUsuarioIdAndStatus(
                     rodadaId,

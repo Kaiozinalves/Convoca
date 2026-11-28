@@ -7,7 +7,7 @@ import com.pelmanager.dto.request.VotoRequestDTO;
 import com.convoca.framework.domain.CheckIn;
 import com.convoca.framework.domain.Evento;
 import com.convoca.framework.domain.Usuario;
-import com.pelmanager.entity.VotoRodada;
+import com.convoca.framework.domain.Voto;
 import com.pelmanager.entity.enums.CategoriaVoto;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
@@ -18,7 +18,7 @@ import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
-import com.pelmanager.repository.VotoRodadaRepository;
+import com.convoca.framework.repository.VotoRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,14 +35,14 @@ public class VotacaoService {
     public static final String ENCERRADA = "ENCERRADA";
 
     private final EventoRepository rodadaRepository;
-    private final VotoRodadaRepository votoRepository;
+    private final VotoRepository votoRepository;
     private final CheckInRepository checkInRepository;
     private final UsuarioRepository usuarioRepository;
     private final ServicoGrupo servicoGrupo;
     private final ServicoEvento servicoEvento;
 
     public VotacaoService(EventoRepository rodadaRepository,
-                          VotoRodadaRepository votoRepository,
+                          VotoRepository votoRepository,
                           CheckInRepository checkInRepository,
                           UsuarioRepository usuarioRepository,
                           ServicoGrupo servicoGrupo,
@@ -87,13 +87,13 @@ public class VotacaoService {
         }
         Usuario votado = servicoGrupo.buscarUsuario(dto.votadoId());
 
-        if (votoRepository.existsByRodadaIdAndCategoriaAndVotanteId(rodadaId, dto.categoria(), votante.getId())) {
+        if (votoRepository.existsByEventoIdAndCategoriaCodigoAndVotanteId(rodadaId, dto.categoria().name(), votante.getId())) {
             throw new OperacaoInvalidaException("Você já votou nesta categoria.");
         }
 
-        VotoRodada voto = new VotoRodada();
-        voto.setRodada(rodada);
-        voto.setCategoria(dto.categoria());
+        Voto voto = new Voto();
+        voto.setEvento(rodada);
+        voto.setCategoria(dto.categoria().comoCategoria());
         voto.setVotante(votante);
         voto.setVotado(votado);
         voto.setDataVoto(LocalDateTime.now());
@@ -136,8 +136,8 @@ public class VotacaoService {
 
         Map<CategoriaVoto, Map<Long, Long>> apuracao = apurar(rodadaId);
         Map<Long, Usuario> usuariosVotados = carregarUsuarios(apuracao);
-        Set<CategoriaVoto> jaVotei = votoRepository.findByRodadaIdAndVotanteId(rodadaId, usuarioId).stream()
-                .map(VotoRodada::getCategoria)
+        Set<CategoriaVoto> jaVotei = votoRepository.findByEventoIdAndVotanteId(rodadaId, usuarioId).stream()
+                .map(voto -> CategoriaVoto.valueOf(voto.getCategoria().getCodigo()))
                 .collect(Collectors.toSet());
 
         List<CategoriaVotacaoDTO> categorias = new ArrayList<>();
@@ -204,7 +204,7 @@ public class VotacaoService {
     private Map<CategoriaVoto, Map<Long, Long>> apurar(Long rodadaId) {
         Map<CategoriaVoto, Map<Long, Long>> resultado = new EnumMap<>(CategoriaVoto.class);
         for (Object[] linha : votoRepository.apurarVotos(rodadaId)) {
-            CategoriaVoto categoria = (CategoriaVoto) linha[0];
+            CategoriaVoto categoria = CategoriaVoto.valueOf((String) linha[0]);
             Long votadoId = (Long) linha[1];
             Long quantidade = (Long) linha[2];
             resultado.computeIfAbsent(categoria, c -> new HashMap<>()).put(votadoId, quantidade);

@@ -10,7 +10,7 @@ import com.convoca.framework.domain.Usuario;
 import com.pelmanager.entity.enums.Posicao;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
-import com.pelmanager.repository.AvaliacaoRepository;
+import com.convoca.framework.repository.AvaliacaoRepository;
 import com.pelmanager.repository.FreeAgentRepository;
 import com.convoca.framework.repository.GrupoRepository;
 import com.convoca.framework.repository.ParticipanteRepository;
@@ -143,7 +143,7 @@ public class FreeAgentService {
 
     private FreeAgentResponseDTO paraDTO(FreeAgent fa) {
         Usuario u = fa.getUsuario();
-        Double media = avaliacaoRepository.calcularMediaDoJogador(u.getId());
+        Double media = avaliacaoRepository.calcularMediaDoUsuario(u.getId());
         Double mediaArredondada = media == null ? null : Math.round(media * 10) / 10.0;
         PreferenciaJogador preferencia = perfilPeladaService.preferenciaDe(u.getId());
 

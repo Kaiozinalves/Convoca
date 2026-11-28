@@ -1,16 +1,19 @@
-package com.pelmanager.entity;
+package com.convoca.framework.domain;
 
-import com.convoca.framework.domain.Evento;
-import com.convoca.framework.domain.Usuario;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.pelmanager.entity.enums.StatusPagamento;
+import com.convoca.framework.domain.enums.StatusPagamento;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Data
+/**
+ * Cobrança de um participante num evento. Quem gera os pagamentos é a {@code PoliticaCobranca}
+ * da instância; o núcleo só guarda o valor e o status.
+ */
+@Getter
+@Setter
 @Entity
 @Table(name = "pagamentos")
 public class Pagamento {
@@ -18,20 +21,20 @@ public class Pagamento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Qual rodada
+    // Qual evento
     @ManyToOne
-    @JoinColumn(name = "rodada_id", nullable = false)
-    @JsonIgnoreProperties({"grupo", "avaliacoes", "enderecoAlternativo", "categoriasVotacao"})
-    private Evento rodada;
+    @JoinColumn(name = "evento_id", nullable = false)
+    private Evento evento;
 
     // Qual usuário deve pagar
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
-    @JsonIgnoreProperties({"senha", "gruposQueParticipa", "avaliacoesFeitas", "avaliacoesRecebidas", "endereco"})
     private Usuario usuario;
 
     private BigDecimal valor;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private StatusPagamento status = StatusPagamento.PENDENTE;
 
     private LocalDateTime criadoEm;
@@ -45,9 +48,5 @@ public class Pagamento {
     public void marcarComoPago() {
         this.status = StatusPagamento.PAGO;
         this.pagoEm = LocalDateTime.now();
-    }
-
-    public String getNomeRodada() {
-        return rodada != null ? "Rodada " + rodada.getId() : "Rodada desconhecida";
     }
 }

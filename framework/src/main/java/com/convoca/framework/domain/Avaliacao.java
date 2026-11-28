@@ -1,23 +1,24 @@
-package com.pelmanager.entity;
+package com.convoca.framework.domain;
 
-import com.convoca.framework.domain.Evento;
-import com.convoca.framework.domain.Usuario;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/** Nota (de 1 a 5) e comentário opcional que um participante dá a outro depois de um evento. */
 @Entity
 @Table(name = "avaliacoes")
-@Data
+@Getter
+@Setter
 public class Avaliacao {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "rodada_id", nullable = false)
-    private Evento rodada;
+    @JoinColumn(name = "evento_id", nullable = false)
+    private Evento evento;
 
     @ManyToOne
     @JoinColumn(name = "avaliador_id", nullable = false)

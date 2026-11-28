@@ -1,6 +1,7 @@
 package com.pelmanager.controller;
 
-import com.pelmanager.entity.Pagamento;
+import com.convoca.framework.domain.Pagamento;
+import com.pelmanager.dto.PagamentoResponseDTO;
 import com.pelmanager.service.PagamentoService;
 import com.pelmanager.service.PerfilPeladaService;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +23,9 @@ public class PagamentoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Pagamento> obterPagamento(@PathVariable Long id) {
+    public ResponseEntity<PagamentoResponseDTO> obterPagamento(@PathVariable Long id) {
         Pagamento p = pagamentoService.obterPagamento(id);
-        return ResponseEntity.ok(p);
+        return ResponseEntity.ok(PagamentoResponseDTO.de(p));
     }
 
     @GetMapping("/{id}/qr-code")
@@ -34,8 +35,8 @@ public class PagamentoController {
             String qrCode = pagamentoService.gerarQrCode(id);
             String copiaECola = pagamentoService.gerarCopiaECola(id);
             String chavePix = "";
-            if (p.getRodada() != null && p.getRodada().getGrupo() != null) {
-                String chave = perfilPeladaService.configuracaoDe(p.getRodada().getGrupo()).getChavePixGerente();
+            if (p.getEvento() != null && p.getEvento().getGrupo() != null) {
+                String chave = perfilPeladaService.configuracaoDe(p.getEvento().getGrupo()).getChavePixGerente();
                 chavePix = chave != null ? chave : "";
             }
             String valor = p.getValor() != null ? p.getValor().toPlainString() : "0.00";
@@ -55,26 +56,26 @@ public class PagamentoController {
     }
 
     @GetMapping("/rodada/{rodadaId}")
-    public ResponseEntity<List<Pagamento>> obterRodada(@PathVariable Long rodadaId) {
-        return ResponseEntity.ok(pagamentoService.obterPagamentosRodada(rodadaId));
+    public ResponseEntity<List<PagamentoResponseDTO>> obterRodada(@PathVariable Long rodadaId) {
+        return ResponseEntity.ok(paraDTO(pagamentoService.obterPagamentosRodada(rodadaId)));
     }
 
     @GetMapping("/rodada/{rodadaId}/pendentes")
-    public ResponseEntity<List<Pagamento>> obterPendentes(@PathVariable Long rodadaId) {
-        return ResponseEntity.ok(pagamentoService.obterPendentes(rodadaId));
+    public ResponseEntity<List<PagamentoResponseDTO>> obterPendentes(@PathVariable Long rodadaId) {
+        return ResponseEntity.ok(paraDTO(pagamentoService.obterPendentes(rodadaId)));
     }
 
     @PostMapping("/rodada/{rodadaId}/gerar")
-    public ResponseEntity<List<Pagamento>> gerarPagamentosRodada(@PathVariable Long rodadaId,
-                                                                 @RequestParam("usuarioId") Long usuarioId) {
-        return ResponseEntity.ok(pagamentoService.gerarPagamentosComoAdmin(rodadaId, usuarioId));
+    public ResponseEntity<List<PagamentoResponseDTO>> gerarPagamentosRodada(@PathVariable Long rodadaId,
+                                                                            @RequestParam("usuarioId") Long usuarioId) {
+        return ResponseEntity.ok(paraDTO(pagamentoService.gerarPagamentosComoAdmin(rodadaId, usuarioId)));
     }
 
     @PostMapping("/rodada/{rodadaId}/desistencia/{usuarioId}")
-    public ResponseEntity<List<Pagamento>> registrarDesistencia(@PathVariable Long rodadaId,
-                                                                @PathVariable Long usuarioId,
-                                                                @RequestParam("adminId") Long adminId) {
-        return ResponseEntity.ok(pagamentoService.registrarDesistencia(rodadaId, usuarioId, adminId));
+    public ResponseEntity<List<PagamentoResponseDTO>> registrarDesistencia(@PathVariable Long rodadaId,
+                                                                           @PathVariable Long usuarioId,
+                                                                           @RequestParam("adminId") Long adminId) {
+        return ResponseEntity.ok(paraDTO(pagamentoService.registrarDesistencia(rodadaId, usuarioId, adminId)));
     }
 
     @PostMapping("/{id}/marcar-pago")
@@ -84,5 +85,9 @@ public class PagamentoController {
         return ResponseEntity.ok(Map.of(
                 "mensagem", "Pagamento marcado como recebido"
         ));
+    }
+
+    private List<PagamentoResponseDTO> paraDTO(List<Pagamento> pagamentos) {
+        return pagamentos.stream().map(PagamentoResponseDTO::de).toList();
     }
 }

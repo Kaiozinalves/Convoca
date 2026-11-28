@@ -9,7 +9,7 @@ import java.util.Objects;
 /**
  * Categoria de reconhecimento de um evento (no PelManager, "melhor jogador", "bagre"...).
  * É um valor, não uma entidade: não tem id nem tabela própria, e vive embutida em quem a usa
- * (as categorias de votação do Evento; no passo 4, Voto e Reconhecimento).
+ * (as categorias de votação do Evento, o Voto e o Reconhecimento).
  */
 @Embeddable
 @Getter
@@ -30,8 +30,7 @@ public class Categoria {
         this.rotulo = rotulo;
     }
 
-    // TODO(human): equals e hashCode. A Categoria é um valor (@Embeddable) guardado num Set do Evento:
-    // decida o que faz duas categorias serem "a mesma" e implemente os dois métodos de forma coerente.
+    // Duas categorias são a mesma quando têm o mesmo código (o rótulo é só texto de exibição).
     @Override public boolean equals(Object o){
         if (this == o){ return true;}
         if(!(o instanceof Categoria outraCategoria)){ return false;}
