@@ -15,6 +15,7 @@ import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.exception.EventoNaoEncontradoException;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EventoRepository;
+import com.convoca.framework.repository.ReconhecimentoRepository;
 import com.convoca.framework.repository.UsuarioRepository;
 import com.convoca.framework.repository.VotoRepository;
 import org.springframework.stereotype.Service;
@@ -36,19 +37,22 @@ public class VotacaoService {
     private final UsuarioRepository usuarioRepository;
     private final ServicoGrupo servicoGrupo;
     private final ServicoEvento servicoEvento;
+    private final ReconhecimentoRepository reconhecimentoRepository;
 
     public VotacaoService(EventoRepository rodadaRepository,
                           VotoRepository votoRepository,
                           CheckInRepository checkInRepository,
                           UsuarioRepository usuarioRepository,
                           ServicoGrupo servicoGrupo,
-                          ServicoEvento servicoEvento) {
+                          ServicoEvento servicoEvento,
+                          ReconhecimentoRepository reconhecimentoRepository) {
         this.rodadaRepository = rodadaRepository;
         this.votoRepository = votoRepository;
         this.checkInRepository = checkInRepository;
         this.usuarioRepository = usuarioRepository;
         this.servicoGrupo = servicoGrupo;
         this.servicoEvento = servicoEvento;
+        this.reconhecimentoRepository = reconhecimentoRepository;
     }
 
     @Transactional
@@ -72,7 +76,7 @@ public class VotacaoService {
         return new VotoRegistradoDTO(rodadaId, dto.categoria().name(), registrado.getDataVoto());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public VotacaoResponseDTO consultar(Long rodadaId, Long usuarioId) {
         Evento rodada = buscarRodada(rodadaId);
         servicoGrupo.exigirParticipante(usuarioId, rodada.getGrupo());
@@ -86,6 +90,9 @@ public class VotacaoService {
         int totalEleitores = confirmados.size();
         boolean elegivel = confirmados.stream().anyMatch(c -> c.getUsuario().getId().equals(usuarioId));
         boolean encerrada = ENCERRADA.equals(situacao);
+        if (encerrada && !reconhecimentoRepository.existsByEventoId(rodadaId)) {
+            servicoEvento.apurar(rodada);   // primeira consulta depois do prazo: registra os vencedores
+        }
 
         // Candidatos: quem confirmou presença, exceto o próprio usuário.
         List<JogadorResumoDTO> candidatos = elegivel

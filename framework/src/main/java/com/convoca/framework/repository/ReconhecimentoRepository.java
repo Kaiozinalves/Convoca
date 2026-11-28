@@ -8,4 +8,6 @@ import java.util.List;
 public interface ReconhecimentoRepository extends JpaRepository<Reconhecimento, Long> {
 
     List<Reconhecimento> findByEventoId(Long eventoId);
+
+    boolean existsByEventoId(Long eventoId);
 }

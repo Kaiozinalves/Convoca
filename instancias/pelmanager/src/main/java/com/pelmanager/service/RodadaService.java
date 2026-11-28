@@ -94,7 +94,7 @@ public class RodadaService {
 
     @Transactional
     public RodadaStatusResponseDTO finalizarRodada(Long rodadaId, Long usuarioId) {
-        // Categorias e prazo vêm da ConfiguracaoPelada até a PoliticaReconhecimento (passo 7).
+        // A PoliticaReconhecimento define o catálogo; o grupo escolhe as categorias ativas e o prazo.
         ConfiguracaoPelada configuracao = perfilPeladaService.configuracaoDe(buscarRodada(rodadaId).getGrupo());
         Set<Categoria> categorias = configuracao.getCategoriasAtivas().stream()
                 .map(CategoriaVoto::comoCategoria)
@@ -115,7 +115,9 @@ public class RodadaService {
         }
 
         rodada.setVotacaoAte(LocalDateTime.now());
-        return paraStatusDTO(rodadaRepository.save(rodada));
+        Evento salva = rodadaRepository.save(rodada);
+        servicoEvento.apurar(salva);   // votação encerrada pelo admin: registra os vencedores
+        return paraStatusDTO(salva);
     }
 
     /** O valor por participante vem das cobranças (PagamentoService.valorPorParticipante), não do Evento. */

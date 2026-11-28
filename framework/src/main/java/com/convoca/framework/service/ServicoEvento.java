@@ -7,6 +7,7 @@ import com.convoca.framework.domain.enums.StatusPagamento;
 import com.convoca.framework.exception.*;
 import com.convoca.framework.hotspot.EstrategiaFormacaoEquipes;
 import com.convoca.framework.hotspot.PoliticaCobranca;
+import com.convoca.framework.hotspot.PoliticaReconhecimento;
 import com.convoca.framework.repository.AvaliacaoRepository;
 import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.EquipeRepository;
@@ -14,6 +15,7 @@ import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.GrupoRepository;
 import com.convoca.framework.repository.PagamentoRepository;
 import com.convoca.framework.repository.ParticipanteRepository;
+import com.convoca.framework.repository.ReconhecimentoRepository;
 import com.convoca.framework.repository.VotoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -35,8 +37,9 @@ import java.util.Set;
  * local alternativo, ciclo agendado → em andamento → finalizado, confirmação/cancelamento de
  * presença, fechamento do check-in (equipes e cobranças), votos e avaliações.
  *
- * <p>No {@code fecharCheckIn} o núcleo conduz o fluxo e chama os pontos variáveis da instância:
- * {@link EstrategiaFormacaoEquipes} e {@link PoliticaCobranca}. Ainda falta {@code apurar} (passo 7).
+ * <p>O núcleo conduz os fluxos e chama os pontos variáveis da instância: {@link EstrategiaFormacaoEquipes}
+ * e {@link PoliticaCobranca} no {@code fecharCheckIn}; {@link PoliticaReconhecimento} no
+ * {@code finalizar} (abre ou não a votação) e no {@code apurar}.
  */
 @Service
 public class ServicoEvento {
@@ -49,9 +52,11 @@ public class ServicoEvento {
     private final AvaliacaoRepository avaliacaoRepository;
     private final EquipeRepository equipeRepository;
     private final PagamentoRepository pagamentoRepository;
+    private final ReconhecimentoRepository reconhecimentoRepository;
     private final ServicoGrupo servicoGrupo;
     private final EstrategiaFormacaoEquipes estrategiaFormacaoEquipes;
     private final PoliticaCobranca politicaCobranca;
+    private final PoliticaReconhecimento politicaReconhecimento;
 
     public ServicoEvento(EventoRepository eventoRepository,
                          GrupoRepository grupoRepository,
@@ -61,9 +66,11 @@ public class ServicoEvento {
                          AvaliacaoRepository avaliacaoRepository,
                          EquipeRepository equipeRepository,
                          PagamentoRepository pagamentoRepository,
+                         ReconhecimentoRepository reconhecimentoRepository,
                          ServicoGrupo servicoGrupo,
                          EstrategiaFormacaoEquipes estrategiaFormacaoEquipes,
-                         PoliticaCobranca politicaCobranca) {
+                         PoliticaCobranca politicaCobranca,
+                         PoliticaReconhecimento politicaReconhecimento) {
         this.eventoRepository = eventoRepository;
         this.grupoRepository = grupoRepository;
         this.checkInRepository = checkInRepository;
@@ -72,9 +79,11 @@ public class ServicoEvento {
         this.avaliacaoRepository = avaliacaoRepository;
         this.equipeRepository = equipeRepository;
         this.pagamentoRepository = pagamentoRepository;
+        this.reconhecimentoRepository = reconhecimentoRepository;
         this.servicoGrupo = servicoGrupo;
         this.estrategiaFormacaoEquipes = estrategiaFormacaoEquipes;
         this.politicaCobranca = politicaCobranca;
+        this.politicaReconhecimento = politicaReconhecimento;
     }
 
     public Evento buscarEvento(Long eventoId) {
@@ -294,8 +303,9 @@ public class ServicoEvento {
     }
 
     /**
-     * Finaliza o evento e abre a janela de votação.
-     * TEMPORÁRIO: categorias e prazo vêm da instância até a PoliticaReconhecimento (passo 7).
+     * Finaliza o evento. Se a {@link PoliticaReconhecimento} exige votação, abre a janela com as
+     * categorias escolhidas pela instância (todas do catálogo da política) e o prazo dado; a apuração
+     * fica para quando a janela fechar. Sem votação, apura na hora.
      */
     @Transactional
     public Evento finalizar(Long eventoId, Long usuarioId, Set<Categoria> categoriasVotacao, int prazoVotacaoHoras) {
@@ -308,13 +318,45 @@ public class ServicoEvento {
         if (evento.getStatus() != StatusEvento.EM_ANDAMENTO) {
             throw new OperacaoInvalidaException("Inicie o evento antes de finalizá-lo.");
         }
+        boolean exigeVotacao = politicaReconhecimento.exigeVotacao();
+        if (exigeVotacao && !politicaReconhecimento.categorias().containsAll(categoriasVotacao)) {
+            throw new RequisicaoInvalidaException("Há categorias de votação que a política de reconhecimento não conhece.");
+        }
 
         LocalDateTime agora = LocalDateTime.now();
         evento.setStatus(StatusEvento.FINALIZADO);
         evento.setFinalizadoEm(agora);
-        evento.setVotacaoAte(agora.plusHours(prazoVotacaoHoras));
-        evento.setCategoriasVotacao(new HashSet<>(categoriasVotacao));
-        return eventoRepository.save(evento);
+        if (exigeVotacao) {
+            evento.setVotacaoAte(agora.plusHours(prazoVotacaoHoras));
+            evento.setCategoriasVotacao(new HashSet<>(categoriasVotacao));
+        }
+        Evento salvo = eventoRepository.save(evento);
+
+        if (!exigeVotacao) {
+            apurar(salvo);
+        }
+        return salvo;
+    }
+
+    /**
+     * Apura o evento: pede os reconhecimentos à {@link PoliticaReconhecimento} e os grava. Só depois
+     * que o evento é finalizado e a votação (se houver) fechou. Pode ser chamado de novo: os
+     * reconhecimentos anteriores do evento são substituídos, então nada duplica.
+     */
+    @Transactional
+    public List<Reconhecimento> apurar(Evento evento) {
+        Evento atual = buscarEvento(evento.getId());
+        if (atual.getStatus() != StatusEvento.FINALIZADO) {
+            throw new OperacaoInvalidaException("Só é possível apurar um evento finalizado.");
+        }
+        if (atual.votacaoAberta()) {
+            throw new OperacaoInvalidaException("A votação deste evento ainda está aberta.");
+        }
+
+        reconhecimentoRepository.deleteAll(reconhecimentoRepository.findByEventoId(atual.getId()));
+        List<Reconhecimento> reconhecimentos = politicaReconhecimento.apurar(atual);
+        reconhecimentos.forEach(reconhecimento -> reconhecimento.setEvento(atual));
+        return reconhecimentoRepository.saveAll(reconhecimentos);
     }
 
     /**
