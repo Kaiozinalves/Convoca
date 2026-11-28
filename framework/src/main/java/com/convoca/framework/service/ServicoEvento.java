@@ -3,11 +3,16 @@ package com.convoca.framework.service;
 import com.convoca.framework.domain.*;
 import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusEvento;
+import com.convoca.framework.domain.enums.StatusPagamento;
 import com.convoca.framework.exception.*;
+import com.convoca.framework.hotspot.EstrategiaFormacaoEquipes;
+import com.convoca.framework.hotspot.PoliticaCobranca;
 import com.convoca.framework.repository.AvaliacaoRepository;
 import com.convoca.framework.repository.CheckInRepository;
+import com.convoca.framework.repository.EquipeRepository;
 import com.convoca.framework.repository.EventoRepository;
 import com.convoca.framework.repository.GrupoRepository;
+import com.convoca.framework.repository.PagamentoRepository;
 import com.convoca.framework.repository.ParticipanteRepository;
 import com.convoca.framework.repository.VotoRepository;
 import jakarta.transaction.Transactional;
@@ -18,16 +23,20 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * Pontos fixos "local", "eventos", "check-in" e "avaliação": agendamento, local alternativo, ciclo
- * agendado → em andamento → finalizado, confirmação/cancelamento de presença, votos e avaliações.
+ * Pontos fixos "local", "eventos", "check-in", "formação de equipes" e "avaliação": agendamento,
+ * local alternativo, ciclo agendado → em andamento → finalizado, confirmação/cancelamento de
+ * presença, fechamento do check-in (equipes e cobranças), votos e avaliações.
  *
- * <p>Ainda faltam {@code fecharCheckIn} e {@code apurar}, que dependem dos pontos variáveis
- * (passos 5 a 7).
+ * <p>No {@code fecharCheckIn} o núcleo conduz o fluxo e chama os pontos variáveis da instância:
+ * {@link EstrategiaFormacaoEquipes} e {@link PoliticaCobranca}. Ainda falta {@code apurar} (passo 7).
  */
 @Service
 public class ServicoEvento {
@@ -38,7 +47,11 @@ public class ServicoEvento {
     private final ParticipanteRepository participanteRepository;
     private final VotoRepository votoRepository;
     private final AvaliacaoRepository avaliacaoRepository;
+    private final EquipeRepository equipeRepository;
+    private final PagamentoRepository pagamentoRepository;
     private final ServicoGrupo servicoGrupo;
+    private final EstrategiaFormacaoEquipes estrategiaFormacaoEquipes;
+    private final PoliticaCobranca politicaCobranca;
 
     public ServicoEvento(EventoRepository eventoRepository,
                          GrupoRepository grupoRepository,
@@ -46,14 +59,22 @@ public class ServicoEvento {
                          ParticipanteRepository participanteRepository,
                          VotoRepository votoRepository,
                          AvaliacaoRepository avaliacaoRepository,
-                         ServicoGrupo servicoGrupo) {
+                         EquipeRepository equipeRepository,
+                         PagamentoRepository pagamentoRepository,
+                         ServicoGrupo servicoGrupo,
+                         EstrategiaFormacaoEquipes estrategiaFormacaoEquipes,
+                         PoliticaCobranca politicaCobranca) {
         this.eventoRepository = eventoRepository;
         this.grupoRepository = grupoRepository;
         this.checkInRepository = checkInRepository;
         this.participanteRepository = participanteRepository;
         this.votoRepository = votoRepository;
         this.avaliacaoRepository = avaliacaoRepository;
+        this.equipeRepository = equipeRepository;
+        this.pagamentoRepository = pagamentoRepository;
         this.servicoGrupo = servicoGrupo;
+        this.estrategiaFormacaoEquipes = estrategiaFormacaoEquipes;
+        this.politicaCobranca = politicaCobranca;
     }
 
     public Evento buscarEvento(Long eventoId) {
@@ -140,6 +161,7 @@ public class ServicoEvento {
 
     /**
      * Cancela a presença. Mantém a regra atual do PelManager: não valida o status do evento.
+     * Se a pessoa já tinha cobrança em aberto, ela é cancelada; as dos outros não são recalculadas.
      */
     @Transactional
     public void cancelarPresenca(Long eventoId, Long usuarioId) {
@@ -148,11 +170,109 @@ public class ServicoEvento {
             checkIn.setStatus(StatusCheckIn.CANCELADO);
             checkInRepository.save(checkIn);
         });
+        pagamentoRepository.findByEventoIdAndUsuarioId(eventoId, usuarioId)
+                .filter(pagamento -> !pagamento.foiPago())
+                .ifPresent(pagamento -> {
+                    pagamento.setStatus(StatusPagamento.CANCELADO);
+                    pagamentoRepository.save(pagamento);
+                });
     }
 
     public boolean temCheckInConfirmado(Long eventoId, Long usuarioId) {
         return usuarioId != null
                 && checkInRepository.existsByEventoIdAndParticipanteUsuarioIdAndStatus(eventoId, usuarioId, StatusCheckIn.CONFIRMADO);
+    }
+
+    /**
+     * Fecha o check-in: forma as equipes com os confirmados e gera as cobranças. Fluxo fixo:
+     * valida o status → busca os confirmados → {@link EstrategiaFormacaoEquipes#formar} → salva as
+     * equipes → {@link PoliticaCobranca#gerarCobrancas} → salva os pagamentos.
+     *
+     * <p>Pode ser refeito enquanto o evento está agendado: as equipes anteriores são desfeitas e as
+     * cobranças, atualizadas (pagamentos já pagos nunca mudam). Quem confirmar depois entra no
+     * próximo fechamento.
+     */
+    @Transactional
+    public List<Equipe> fecharCheckIn(Evento evento) {
+        evento = buscarEvento(evento.getId());
+        if (evento.getStatus() != StatusEvento.AGENDADO) {
+            throw new OperacaoInvalidaException("Só é possível fechar o check-in de um evento agendado.");
+        }
+
+        List<CheckIn> confirmados = checkInRepository.findByEventoIdAndStatus(evento.getId(), StatusCheckIn.CONFIRMADO);
+
+        desfazerEquipes(evento.getId());
+        List<Equipe> equipes = estrategiaFormacaoEquipes.formar(evento, confirmados);
+        for (Equipe equipe : equipes) {
+            equipe.setEvento(evento);
+            equipe.getMembros().forEach(membro -> membro.setEquipe(equipe));
+        }
+        equipeRepository.saveAll(equipes);
+
+        salvarCobrancas(evento, politicaCobranca.gerarCobrancas(evento, confirmados));
+
+        evento.setDataCheckInFechado(LocalDateTime.now());
+        eventoRepository.save(evento);
+        return equipes;
+    }
+
+    /**
+     * Gera de novo as cobranças com os confirmados de agora, sem mexer nas equipes. Serve para a
+     * instância cobrar num momento que ela escolhe (no PelManager: ao iniciar sem sorteio, ou pelo
+     * botão "gerar cobranças"). Devolve todos os pagamentos do evento.
+     */
+    @Transactional
+    public List<Pagamento> atualizarCobrancas(Evento evento) {
+        evento = buscarEvento(evento.getId());
+        List<CheckIn> confirmados = checkInRepository.findByEventoIdAndStatus(evento.getId(), StatusCheckIn.CONFIRMADO);
+        salvarCobrancas(evento, politicaCobranca.gerarCobrancas(evento, confirmados));
+        return pagamentoRepository.findByEventoId(evento.getId());
+    }
+
+    private void desfazerEquipes(Long eventoId) {
+        List<Equipe> anteriores = equipeRepository.findByEventoId(eventoId);
+        for (Equipe anterior : anteriores) {
+            if (anterior.getMembros() != null) {
+                anterior.getMembros().forEach(checkIn -> checkIn.setEquipe(null));
+            }
+        }
+        equipeRepository.deleteAll(anteriores);
+    }
+
+    /**
+     * Aplica as cobranças da política sobre os pagamentos já gravados, reaproveitando as linhas (os
+     * ids, usados no QR code, não mudam): quem segue cobrado tem o valor atualizado e volta a
+     * PENDENTE, quem saiu da lista é cancelado e quem ainda não tinha pagamento ganha um.
+     * Pagamentos já pagos nunca mudam.
+     */
+    private void salvarCobrancas(Evento evento, List<Pagamento> cobrancas) {
+        Map<Long, Pagamento> cobrancaPorUsuario = new HashMap<>();
+        for (Pagamento cobranca : cobrancas) {
+            cobrancaPorUsuario.put(cobranca.getUsuario().getId(), cobranca);
+        }
+
+        for (Pagamento existente : pagamentoRepository.findByEventoId(evento.getId())) {
+            Pagamento cobranca = cobrancaPorUsuario.remove(existente.getUsuario().getId());
+            if (existente.foiPago()) {
+                continue;
+            }
+            if (cobranca == null) {
+                existente.setStatus(StatusPagamento.CANCELADO);
+            } else {
+                existente.setValor(cobranca.getValor());
+                existente.setStatus(StatusPagamento.PENDENTE);
+                if (existente.getCriadoEm() == null) {
+                    existente.setCriadoEm(cobranca.getCriadoEm());
+                }
+            }
+            pagamentoRepository.save(existente);
+        }
+
+        // Sobraram só as cobranças de quem ainda não tinha pagamento neste evento.
+        for (Pagamento nova : cobrancaPorUsuario.values()) {
+            nova.setEvento(evento);
+            pagamentoRepository.save(nova);
+        }
     }
 
     @Transactional
@@ -167,7 +287,9 @@ public class ServicoEvento {
         LocalDateTime agora = LocalDateTime.now();
         evento.setStatus(StatusEvento.EM_ANDAMENTO);
         evento.setIniciadoEm(agora);
-        evento.setDataCheckInFechado(agora);
+        if (evento.getDataCheckInFechado() == null) {   // sem fecharCheckIn antes, o check-in fecha agora
+            evento.setDataCheckInFechado(agora);
+        }
         return eventoRepository.save(evento);
     }
 

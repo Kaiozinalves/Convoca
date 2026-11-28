@@ -2,55 +2,43 @@ package com.pelmanager.service;
 
 import com.convoca.framework.service.ServicoEvento;
 import com.convoca.framework.service.ServicoGrupo;
-import com.convoca.framework.domain.CheckIn;
 import com.pelmanager.entity.ConfiguracaoPelada;
 import com.convoca.framework.domain.Pagamento;
 import com.convoca.framework.domain.Evento;
-import com.convoca.framework.domain.enums.StatusCheckIn;
 import com.convoca.framework.domain.enums.StatusPagamento;
 import com.convoca.framework.exception.RecursoNaoEncontradoException;
 import com.convoca.framework.exception.RequisicaoInvalidaException;
 import com.convoca.framework.exception.EventoNaoEncontradoException;
-import com.convoca.framework.repository.CheckInRepository;
 import com.convoca.framework.repository.PagamentoRepository;
 import com.convoca.framework.repository.EventoRepository;
-import com.convoca.framework.hotspot.PoliticaCobranca;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class PagamentoService {
 
     private final PagamentoRepository pagamentoRepository;
-    private final CheckInRepository checkInRepository;
     private final GerarQrCodeService qrCodeService;
     private final EventoRepository rodadaRepository;
     private final ServicoGrupo servicoGrupo;
     private final ServicoEvento servicoEvento;
     private final PerfilPeladaService perfilPeladaService;
-    private final PoliticaCobranca politicaCobranca;
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
-                            CheckInRepository checkInRepository,
                             GerarQrCodeService qrCodeService,
                             EventoRepository rodadaRepository,
                             ServicoGrupo servicoGrupo,
                             ServicoEvento servicoEvento,
-                            PerfilPeladaService perfilPeladaService,
-                            PoliticaCobranca politicaCobranca) {
+                            PerfilPeladaService perfilPeladaService) {
         this.pagamentoRepository = pagamentoRepository;
-        this.checkInRepository = checkInRepository;
         this.qrCodeService = qrCodeService;
         this.rodadaRepository = rodadaRepository;
         this.servicoGrupo = servicoGrupo;
         this.servicoEvento = servicoEvento;
         this.perfilPeladaService = perfilPeladaService;
-        this.politicaCobranca = politicaCobranca;
     }
 
     @Transactional
@@ -58,11 +46,16 @@ public class PagamentoService {
         Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
         servicoGrupo.exigirAdmin(usuarioAdminId, rodada.getGrupo());
-        return criarPagamentoAoFinalizarCheckIn(rodadaId);
+        return atualizarCobrancas(rodadaId);
     }
 
+    /**
+     * Gera de novo as cobranças com os confirmados de agora (ao iniciar a rodada e no botão "gerar
+     * cobranças"). O sorteio já gera as cobranças no fecharCheckIn do núcleo; check-in e cancelamento
+     * não recalculam nada. Com o sistema de pagamento desligado, nada muda.
+     */
     @Transactional
-    public List<Pagamento> criarPagamentoAoFinalizarCheckIn(Long rodadaId) {
+    public List<Pagamento> atualizarCobrancas(Long rodadaId) {
         Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
 
@@ -71,44 +64,7 @@ public class PagamentoService {
             return pagamentoRepository.findByEventoId(rodadaId);
         }
 
-        List<CheckIn> confirmados = checkInRepository.findByEventoIdAndStatus(rodadaId, StatusCheckIn.CONFIRMADO);
-
-        // A PoliticaCobranca (RateioDoCampo) diz quem deve quanto; aqui só conciliamos com o que já existe.
-        // TEMPORÁRIO: no passo 6 as cobranças passam a ser geradas uma vez, no fecharCheckIn do núcleo.
-        conciliar(rodadaId, politicaCobranca.gerarCobrancas(rodada, confirmados));
-        return pagamentoRepository.findByEventoId(rodadaId);
-    }
-
-    /**
-     * Aplica as cobranças calculadas sobre os pagamentos já gravados: quem segue cobrado tem o valor
-     * atualizado (e volta a PENDENTE se tinha sido cancelado), quem não está mais na lista é cancelado
-     * e quem ainda não tinha pagamento ganha um. Pagamentos já pagos nunca mudam.
-     */
-    private void conciliar(Long rodadaId, List<Pagamento> cobrancas) {
-        Map<Long, Pagamento> cobrancaPorUsuario = new HashMap<>();
-        for (Pagamento cobranca : cobrancas) {
-            cobrancaPorUsuario.put(cobranca.getUsuario().getId(), cobranca);
-        }
-
-        for (Pagamento existente : pagamentoRepository.findByEventoId(rodadaId)) {
-            Pagamento cobranca = cobrancaPorUsuario.remove(existente.getUsuario().getId());
-            if (existente.foiPago()) {
-                continue;
-            }
-            if (cobranca == null) {
-                existente.setStatus(StatusPagamento.CANCELADO);
-            } else {
-                existente.setValor(cobranca.getValor());
-                existente.setStatus(StatusPagamento.PENDENTE);
-                if (existente.getCriadoEm() == null) {
-                    existente.setCriadoEm(cobranca.getCriadoEm());
-                }
-            }
-            pagamentoRepository.save(existente);
-        }
-
-        // Sobraram só as cobranças de quem ainda não tinha pagamento neste evento.
-        pagamentoRepository.saveAll(cobrancaPorUsuario.values());
+        return servicoEvento.atualizarCobrancas(rodada);
     }
 
     /**
@@ -177,14 +133,7 @@ public class PagamentoService {
         Evento rodada = rodadaRepository.findById(rodadaId)
                 .orElseThrow(() -> new EventoNaoEncontradoException(rodadaId));
         servicoGrupo.exigirAdmin(usuarioAdminId, rodada.getGrupo());
-        servicoEvento.cancelarPresenca(rodadaId, usuarioId);
-        CalcularPorDesistencia(rodadaId);
+        servicoEvento.cancelarPresenca(rodadaId, usuarioId);   // cancela também a cobrança em aberto dele
         return pagamentoRepository.findByEventoId(rodadaId);
-    }
-
-    /** Recalcula as cobranças depois que alguém sai: o rateio entre os que ficaram é o mesmo do check-in. */
-    @Transactional
-    public void CalcularPorDesistencia(Long rodadaId) {
-        criarPagamentoAoFinalizarCheckIn(rodadaId);
     }
 }

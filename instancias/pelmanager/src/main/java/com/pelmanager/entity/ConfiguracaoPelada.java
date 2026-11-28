@@ -2,6 +2,7 @@ package com.pelmanager.entity;
 
 import com.convoca.framework.domain.PerfilGrupo;
 import com.pelmanager.entity.enums.CategoriaVoto;
+import com.pelmanager.entity.enums.ModoFormacao;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -48,6 +49,11 @@ public class ConfiguracaoPelada extends PerfilGrupo {
     // Quantas horas a votação fica aberta depois que a rodada é finalizada.
     @Column(name = "prazo_avaliacao_horas", nullable = false)
     private int prazoAvaliacaoHoras = 24;
+
+    // Modo do último sorteio: cada rota de sorteio grava o seu antes de fechar o check-in.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modo_formacao", nullable = false, length = 20)
+    private ModoFormacao modoFormacao = ModoFormacao.EQUILIBRADO;
 
     public boolean categoriaAtiva(CategoriaVoto categoria) {
         return categoriasAtivas.contains(categoria);

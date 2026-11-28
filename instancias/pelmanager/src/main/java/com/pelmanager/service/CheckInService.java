@@ -31,7 +31,6 @@ public class CheckInService {
     private final ParticipanteRepository participanteRepository;
     private final ServicoGrupo servicoGrupo;
     private final ServicoEvento servicoEvento;
-    private final PagamentoService pagamentoService;
     private final PerfilPeladaService perfilPeladaService;
 
     public CheckInService(CheckInRepository checkInRepository,
@@ -40,7 +39,6 @@ public class CheckInService {
                           ParticipanteRepository participanteRepository,
                           ServicoGrupo servicoGrupo,
                           ServicoEvento servicoEvento,
-                          PagamentoService pagamentoService,
                           PerfilPeladaService perfilPeladaService) {
         this.checkInRepository = checkInRepository;
         this.rodadaRepository = rodadaRepository;
@@ -48,14 +46,12 @@ public class CheckInService {
         this.participanteRepository = participanteRepository;
         this.servicoGrupo = servicoGrupo;
         this.servicoEvento = servicoEvento;
-        this.pagamentoService = pagamentoService;
         this.perfilPeladaService = perfilPeladaService;
     }
 
     @Transactional
     public CheckInResponseDTO realizarCheckIn(CheckInRequestDTO checkInRequestDTO) {
         CheckIn checkIn = servicoEvento.confirmarPresenca(checkInRequestDTO.rodadaId(), checkInRequestDTO.usuarioId());
-        pagamentoService.criarPagamentoAoFinalizarCheckIn(checkIn.getEvento().getId());   // até o passo 6 (fecharCheckIn)
 
         return new CheckInResponseDTO(
                 checkIn.getId(),
@@ -70,7 +66,6 @@ public class CheckInService {
     @Transactional
     public List<ParticipanteCheckInResponseDTO> cancelarCheckIn(Long rodadaId, Long usuarioId) {
         servicoEvento.cancelarPresenca(rodadaId, usuarioId);
-        pagamentoService.CalcularPorDesistencia(rodadaId);   // até o passo 6 (fecharCheckIn)
         return listarStatusDaRodada(rodadaId);
     }
 
@@ -129,8 +124,6 @@ public class CheckInService {
             checkIn.setStatus(StatusCheckIn.CONFIRMADO);
             checkInRepository.save(checkIn);
         }
-
-        pagamentoService.criarPagamentoAoFinalizarCheckIn(rodadaId);
 
         return listarStatusDaRodada(rodadaId);
     }

@@ -88,7 +88,7 @@ public class RodadaService {
     @Transactional
     public RodadaStatusResponseDTO iniciarRodada(Long rodadaId, Long usuarioId) {
         Evento salva = servicoEvento.iniciar(rodadaId, usuarioId);
-        pagamentoService.criarPagamentoAoFinalizarCheckIn(rodadaId);   // até o passo 6 (fecharCheckIn)
+        pagamentoService.atualizarCobrancas(rodadaId);   // cobra quem está confirmado ao começar
         return paraStatusDTO(salva);
     }
 
